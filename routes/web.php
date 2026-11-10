@@ -18,6 +18,26 @@ Route::get('/', function () {
     ]);
 });
 
+// Rute inisialisasi / sinkronisasi database untuk hosting
+Route::get('/seed-db', function () {
+    try {
+        $sql = file_get_contents(database_path('silat_multimedia.sql'));
+        \Illuminate\Support\Facades\DB::unprepared($sql);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Database berhasil disinkronkan!',
+            'users' => \App\Models\User::count(),
+            'alat' => \App\Models\Alat::count(),
+            'peminjaman' => \App\Models\Peminjaman::count(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // ==========================================
 // Rute untuk user yang BELUM login (Guest)
 // ==========================================

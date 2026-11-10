@@ -22,6 +22,17 @@ class AppServiceProvider extends ServiceProvider
     {
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
+
+            try {
+                if (!\Illuminate\Support\Facades\Schema::hasTable('alat') || \App\Models\Alat::count() === 0) {
+                    $sqlPath = database_path('silat_multimedia.sql');
+                    if (file_exists($sqlPath)) {
+                        \Illuminate\Support\Facades\DB::unprepared(file_get_contents($sqlPath));
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Abaikan error saat database belum siap diinisialisasi
+            }
         }
     }
 }
