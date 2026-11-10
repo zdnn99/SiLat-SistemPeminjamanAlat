@@ -1,59 +1,130 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SiLat — Sistem Peminjaman Alat Multimedia
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**SiLat** adalah aplikasi web berbasis Laravel untuk mengelola peminjaman alat ekstrakulikuler Multimedia. Memungkinkan siswa/guru mengajukan peminjaman alat, dan admin memverifikasi, menyetujui, serta melacak pengembaliannya.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ✨ Fitur Utama
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Halaman Publik**: Katalog alat dengan ketersediaan stok real-time
+- **Autentikasi**: Registrasi & login dengan PIN keamanan
+- **Peminjaman**: Ajukan, lacak status, dan lihat riwayat peminjaman
+- **Admin Panel**:
+  - Kelola akun pengguna (setujui, nonaktifkan, hapus)
+  - Kelola alat (tambah, ubah, hapus)
+  - Proses peminjaman (setujui → ambil → kembali)
+  - Riwayat peminjaman dengan filter
+- **Profil**: Ubah data, foto profil, kata sandi, dan PIN
+- **ID Auto-Renumber**: ID tabel dirapikan otomatis saat data dihapus
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🛠️ Teknologi
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- **Backend**: Laravel 12 (PHP 8.2+)
+- **Database**: SQLite
+- **Frontend**: Tailwind CSS (via Vite)
+- **Testing**: PHPUnit (26 test cases)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## 🚀 Cara Instalasi
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Prasyarat
+- PHP >= 8.2
+- Composer
+- Node.js & NPM
 
-### Premium Partners
+### Langkah-langkah
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+# 1. Clone repository
+git clone <url-repo> silat
+cd silat
 
-## Contributing
+# 2. Install dependensi PHP
+composer install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 3. Salin file environment
+cp .env.example .env
 
-## Code of Conduct
+# 4. Generate application key
+php artisan key:generate
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# 5. Buat file database SQLite
+touch database/database.sqlite   # Linux/Mac
+# atau di Windows:
+New-Item database/database.sqlite
 
-## Security Vulnerabilities
+# 6. Jalankan migrasi & seeder
+php artisan migrate --seed
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# 7. Install dependensi Node dan build aset
+npm install
+npm run build
 
-## License
+# 8. Jalankan server lokal
+php artisan serve
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Akses aplikasi di: `http://localhost:8000`
+
+---
+
+## 👤 Akun Default (setelah seeder)
+
+| Peran | Nomor Induk | Password |
+| :--- | :--- | :--- |
+| **Admin** | `00000` | *(sesuai seeder)* |
+
+> Akun admin dibuat melalui `AdminSeeder`. Lihat [`database/seeders/AdminSeeder.php`](database/seeders/AdminSeeder.php) untuk detailnya.
+
+---
+
+## 📂 Struktur Penting
+
+```
+app/
+  Http/Controllers/       # Controller web & admin
+  Models/                 # Eloquent models (User, Alat, Peminjaman)
+  Models/Concerns/        # Trait RenumbersOnDelete
+  Services/               # DatabaseSequenceService (auto-renumber ID)
+database/
+  migrations/             # Skema tabel
+  seeders/                # Data awal (admin, alat)
+  database.sqlite         # File database SQLite (tidak di-push)
+public/
+  images/                 # Gambar statis (banner, alat, auth)
+  uploads/                # Unggahan pengguna (di-gitignore)
+resources/views/          # Blade templates
+routes/web.php            # Definisi rute
+```
+
+---
+
+## 🌐 Deploy ke Hosting (cPanel/Shared Hosting)
+
+1. Upload semua file **kecuali** `node_modules/` dan `vendor/`
+2. Jalankan `composer install --no-dev --optimize-autoloader` di server
+3. Salin `.env.example` → `.env` dan isi nilainya:
+   ```
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://domain-anda.com
+   APP_KEY=  ← generate dengan: php artisan key:generate
+   ```
+4. Pastikan folder `storage/` dan `bootstrap/cache/` bisa ditulis (`chmod 775`)
+5. Jalankan `php artisan migrate --force`
+6. Aset CSS/JS sudah ter-build di `public/build/` — tidak perlu `npm run build` di server
+
+---
+
+## 🧪 Menjalankan Test
+
+```bash
+php artisan test
+# atau
+composer test
+```
+
+26 test cases tersedia mencakup alur admin, peminjaman, dan autentikasi.

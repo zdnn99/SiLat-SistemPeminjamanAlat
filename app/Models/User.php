@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RenumbersOnDelete;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, RenumbersOnDelete;
 
     /**
      * The attributes that are mass assignable.
@@ -22,6 +23,9 @@ class User extends Authenticatable
         'kelas_jurusan',
         'password',
         'pin',
+        'status_akun', // menunggu (belum disetujui admin), aktif, nonaktif, atau minta_hapus
+        'foto_profil',
+        'permintaan_hapus_pada',
     ];
 
     /**
@@ -44,6 +48,15 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'permintaan_hapus_pada' => 'datetime',
         ];
+    }
+
+    /**
+     * URL foto profil pengguna atau null jika belum ada.
+     */
+    public function getFotoUrlAttribute(): ?string
+    {
+        return $this->foto_profil ? asset('uploads/profil/' . $this->foto_profil) : null;
     }
 }

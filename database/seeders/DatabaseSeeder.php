@@ -10,17 +10,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Bikin Akun Admin (Login pakai ID: 000001)
-        User::create([
-            'nama_lengkap' => 'Administrator Sistem',
-            'nomor_induk' => '000001',
-            'peran' => 'admin',
-            'kelas_jurusan' => null,
-            'password' => Hash::make('password123'),
-            'pin' => Hash::make('123456'), // Contoh PIN
-        ]);
-
-        // 2. Bikin Akun Siswa (Login pakai NIS: 23241010)
         User::create([
             'nama_lengkap' => 'SISWA',
             'nomor_induk' => '12345',
@@ -39,5 +28,10 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('guru123'),
             'pin' => Hash::make('112233'),
         ]);
+
+        $this->call(AdminSeeder::class);
+        $this->call(AlatSeeder::class);
+        // Data peminjaman contoh dimatikan: sekarang pengajuan nyata masuk ke dashboard admin.
+        // $this->call(DemoPeminjamanSeeder::class);
     }
 }

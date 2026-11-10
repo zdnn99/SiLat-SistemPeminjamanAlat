@@ -3,21 +3,30 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RenumbersOnDelete;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Alat extends Model
 {
-    use HasFactory;
+    use HasFactory, RenumbersOnDelete;
 
     protected $table = 'alat';
 
     protected $fillable = [
         'nama_alat',
+        'subjudul',
         'slug',
         'deskripsi',
         'stok',
         'foto',
+        'kelengkapan',
+        'aturan',
+    ];
+
+    protected $casts = [
+        'kelengkapan' => 'array',
+        'aturan' => 'array',
     ];
 
     /**
@@ -34,7 +43,7 @@ class Alat extends Model
     public function getJumlahSedangDipinjamAttribute(): int
     {
         return $this->peminjaman()
-            ->whereIn('status', ['menunggu_persetujuan', 'dipinjam'])
+            ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
             ->count();
     }
 
@@ -52,5 +61,50 @@ class Alat extends Model
     public function getTersediaAttribute(): bool
     {
         return $this->stok_tersedia > 0;
+    }
+
+    public function getStatusKetersediaanAttribute(): string
+    {
+        if ($this->tersedia) {
+            return 'Tersedia';
+        }
+
+        return $this->peminjaman()->where('status', 'dipinjam')->exists()
+            ? 'Dipinjam'
+            : 'Dipesan';
+    }
+
+    /**
+     * Subjudul yang tampil di bawah nama alat.
+     * Dipakai nilai dari kolom subjudul (alat baru). Alat lama yang kolomnya masih kosong
+     * memakai daftar bawaan di bawah, lalu terakhir deskripsi.
+     */
+    public function getSubjudulAttribute($nilai): string
+    {
+        if (filled($nilai)) {
+            return $nilai;
+        }
+
+        return [
+            'sony-mirrorless' => 'Sony A6000',
+            'canon-dslr' => 'Canon EOS 1200D',
+            'drone-dokumentasi-1' => 'DJI Mini 2',
+            'drone-dokumentasi-2' => 'DJI Mavic Air 2',
+            'handycam' => 'Sony HDR-CX405',
+            'gimbal-stabilizer' => 'Rekaman Mulus Saat Bergerak',
+            'tripod' => 'Penopang Kamera Dan Handphone',
+            'handphone-dokumentasi' => 'iPhone 13',
+        ][$this->slug] ?? ($this->deskripsi ?? '');
+    }
+
+    public function getFotoUrlAttribute(): string
+    {
+        if (! $this->foto) {
+            return '';
+        }
+
+        return str_starts_with($this->foto, 'uploads/')
+            ? asset($this->foto)
+            : asset('images/alat/' . $this->foto . '1.jpg');
     }
 }
