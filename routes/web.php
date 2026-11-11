@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 // Halaman utama (publik)
 Route::get('/', function () {
     return view('welcome', [
-        'alatDaftar' => Alat::orderBy('id')->get(),
+        'alatDaftar' => Alat::with('peminjaman')->orderBy('id')->get(),
     ]);
 });
 
@@ -87,7 +87,7 @@ Route::middleware('auth')->group(function () {
 
         return view('dashboard', [
             'peminjaman' => $peminjaman,
-            'alatDaftar' => Alat::orderBy('id')->get(),
+            'alatDaftar' => Alat::with('peminjaman')->orderBy('id')->get(),
             'jumlahPeminjaman' => $jumlahPeminjaman,
             'jumlahPerStatus' => $jumlahPerStatus,
             'jumlahTerlambat' => $jumlahTerlambat,
@@ -96,6 +96,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/peminjaman/riwayat', [PeminjamanController::class, 'riwayat'])->name('peminjaman.riwayat');
     Route::get('/peminjaman/{peminjaman}', [PeminjamanController::class, 'show'])->name('peminjaman.show');
+
+    // Batalkan pengajuan peminjaman (hanya ketika status masih menunggu_persetujuan)
+    Route::delete('/peminjaman/{peminjaman}/batal', [PeminjamanController::class, 'batalkan'])->name('peminjaman.batalkan');
 
     // Form Peminjaman (per alat, lewat slug)
     Route::get('/peminjaman/buat/{slug}', [PeminjamanController::class, 'create'])->name('peminjaman.create');
@@ -121,17 +124,25 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
         // Semua peminjaman dikirim (tanpa batas): kartu status dan peringatan terlambat menghitung seluruh data.
         // Tampilan "Permintaan Terbaru" yang dibatasi 5 diatur di admin/dashboard.blade.php.
         $permintaan = Peminjaman::with(['user', 'alat'])
+            ->latest('created_at')
             ->latest('id')
             ->get();
 
-        $alatDaftar = Alat::orderBy('id')->get();
+        $alatDaftar = Alat::with('peminjaman')->orderBy('id')->get();
 
         // Jumlah akun yang menunggu persetujuan (untuk notif di dashboard)
         $jumlahMenunggu = \App\Models\User::where('peran', '!=', 'admin')
             ->where('status_akun', 'menunggu')
             ->count();
 
-        return view('admin.dashboard', compact('permintaan', 'alatDaftar', 'jumlahMenunggu'));
+        // Jumlah akun yang mengajukan penghapusan (untuk notif di dashboard)
+        $jumlahMintaHapus = \App\Models\User::where('peran', '!=', 'admin')
+            ->where(function ($sub) {
+                $sub->where('status_akun', 'minta_hapus')
+                    ->orWhereNotNull('permintaan_hapus_pada');
+            })->count();
+
+        return view('admin.dashboard', compact('permintaan', 'alatDaftar', 'jumlahMenunggu', 'jumlahMintaHapus'));
     })->name('admin.dashboard');
 
     // Tambah alat baru (dibuka dari kotak "Tambah Alat" di dashboard admin) -> URL: /admin/tambah-alat

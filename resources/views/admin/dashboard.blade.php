@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - SiLat Multimedia</title>
     <meta name="description" content="Dashboard admin SiLat, sistem peminjaman alat multimedia Ekstrakurikuler Multimedia SMK Negeri 5 Surakarta.">
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -215,8 +215,9 @@
             'kembali_f'          => $kembali->locale('id')->translatedFormat('j M Y'),
             'pengembalian'       => $pengembalian,
             'pengembalian_warna' => $warnaPengembalian,
-            'pinjam_ts'          => $pinjam->timestamp,   // dipakai untuk mengurutkan berdasarkan tanggal
+            'pinjam_ts'          => $pinjam->timestamp,
             'dibuat_ts'          => ($p->created_at ?? $p->tanggal_pinjam)->timestamp,   // waktu pengajuan dibuat, dasar menentukan "terbaru"
+            'dibuat_f'           => $p->created_at ? \Carbon\Carbon::parse($p->created_at)->locale('id')->translatedFormat('j M Y, H.i') : $pinjam->locale('id')->translatedFormat('j M Y'),
             'terlambat'          => $terlambat,
             'detail_url'         => route('peminjaman.show', $p),
         ];
@@ -225,7 +226,7 @@
     // "Permintaan Terbaru" = 5 pengajuan yang paling baru dibuat (maksimal). Sisanya hanya muncul lewat kartu status
     // atau halaman riwayat.
     $kunciTerbaru = $baris
-        ->sortByDesc(fn ($b) => [$b['dibuat_ts'], $b['pinjam_ts']])
+        ->sortByDesc('dibuat_ts')
         ->take(5)
         ->keys()
         ->all();
@@ -247,7 +248,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-6">
             <!-- Logo & Brand (di HP logo mengecil dan subjudul dipotong supaya tombol profil dan menu tidak terdorong keluar layar) -->
             <a href="{{ url('/admin/dashboard') }}" class="group flex min-w-0 items-center gap-2 sm:gap-3 sm:shrink-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
                 <div class="min-w-0">
                     <span class="text-blue-600 font-extrabold block leading-tight text-2xl transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="text-gray-700 font-semibold text-xs block truncate transition-colors duration-300 group-hover:text-gray-900">Sistem Peminjaman Alat</span>
@@ -377,26 +378,48 @@
                     </a>
                 </div>
 
-                <!-- Notifikasi akun menunggu persetujuan (di atas notif terlambat, selalu didahulukan) -->
+                <!-- Notifikasi akun menunggu persetujuan — Biru (prioritas tertinggi) -->
                 @if ($jumlahMenunggu > 0)
-                    <div role="alert" class="group mb-6 flex items-center gap-4 rounded-2xl border border-gray-200/80 bg-white px-5 py-4 shadow-sm transition-all duration-300 hover:border-amber-300 hover:bg-amber-50/50 hover:shadow-xl hover:shadow-amber-900/10 motion-safe:hover:-translate-y-1">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-white motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-6">
+                    <a href="{{ route('admin.akun.kelola') }}?status=menunggu"
+                       class="group mb-4 flex items-center gap-4 rounded-2xl border border-blue-200 bg-white px-5 py-4 shadow-sm transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-xl hover:shadow-blue-900/10 motion-safe:hover:-translate-y-1">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-6">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                             </svg>
                         </span>
                         <div class="min-w-0 flex-1">
-                            <p class="font-bold text-gray-900 text-sm sm:text-base transition-colors duration-300 group-hover:text-amber-700">{{ $jumlahMenunggu }} pendaftar menunggu persetujuan Anda</p>
+                            <p class="font-bold text-gray-900 text-sm sm:text-base transition-colors duration-300 group-hover:text-blue-700">{{ $jumlahMenunggu }} pendaftar menunggu persetujuan Anda</p>
                             <p class="text-sm text-gray-500 mt-0.5 transition-colors duration-300 group-hover:text-gray-700">Tinjau dan setujui atau tolak akun pendaftar baru melalui halaman Kelola Akun.</p>
                         </div>
-                        <a href="{{ route('admin.akun.kelola') }}?status=menunggu"
-                           class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-semibold text-amber-700 shadow-sm transition-all duration-200 hover:bg-amber-500 hover:text-white hover:border-amber-500 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:scale-95">
+                        <span class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-blue-300 bg-white px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm transition-all duration-200 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 group-hover:shadow-md motion-safe:group-hover:-translate-y-0.5">
                             Tinjau
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
                             </svg>
-                        </a>
-                    </div>
+                        </span>
+                    </a>
+                @endif
+
+                <!-- Notifikasi akun mengajukan penghapusan — Kuning/Amber -->
+                @if (($jumlahMintaHapus ?? 0) > 0)
+                    <a href="{{ route('admin.akun.kelola') }}?status=minta_hapus"
+                       class="group mb-4 flex items-center gap-4 rounded-2xl border border-amber-200 bg-white px-5 py-4 shadow-sm transition-all duration-300 hover:border-amber-400 hover:bg-amber-50/50 hover:shadow-xl hover:shadow-amber-900/10 motion-safe:hover:-translate-y-1">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-white motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-6">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-gray-900 text-sm sm:text-base transition-colors duration-300 group-hover:text-amber-700">{{ $jumlahMintaHapus }} pengguna mengajukan penghapusan akun</p>
+                            <p class="text-sm text-gray-500 mt-0.5 transition-colors duration-300 group-hover:text-gray-700">Tinjau permintaan penghapusan dan setujui atau batalkan melalui halaman Kelola Akun.</p>
+                        </div>
+                        <span class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-semibold text-amber-700 shadow-sm transition-all duration-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 group-hover:shadow-md motion-safe:group-hover:-translate-y-0.5">
+                            Tinjau
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </span>
+                    </a>
                 @endif
 
                 <!-- Peringatan keterlambatan (hanya muncul kalau ada, dihitung dari seluruh data).
@@ -587,11 +610,11 @@
                             <tbody class="divide-y divide-gray-100">
                                 @foreach ($baris as $b)
                                     @php $al = $b['alat_data']; @endphp
-                                    <tr class="baris-pinjam group {{ $b['terbaru'] ? '' : 'hidden' }} cursor-pointer transition-colors duration-200 hover:bg-blue-50 active:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500" tabindex="0" aria-label="Tinjau peminjaman {{ $al['nama'] }} oleh {{ $b['peminjam'] }}" data-url="{{ $b['detail_url'] }}" data-status="{{ $b['status'] }}" data-terbaru="{{ $b['terbaru'] ? '1' : '0' }}" data-label-status="{{ mb_strtolower($b['tampil']['label']) }}" data-tanggal="{{ $b['pinjam_ts'] }}">
+                                    <tr class="baris-pinjam group {{ $b['terbaru'] ? '' : 'hidden' }} cursor-pointer transition-colors duration-200 hover:bg-blue-50 active:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500" tabindex="0" aria-label="Tinjau peminjaman {{ $al['nama'] }} oleh {{ $b['peminjam'] }}" data-url="{{ $b['detail_url'] }}" data-status="{{ $b['status'] }}" data-terbaru="{{ $b['terbaru'] ? '1' : '0' }}" data-label-status="{{ mb_strtolower($b['tampil']['label']) }}" data-tanggal="{{ $b['dibuat_ts'] }}">
                                         <td class="px-6 py-5">
                                             <div class="transition-transform duration-300 motion-safe:group-hover:translate-x-1.5">
                                                 <p class="font-semibold text-gray-900 leading-tight transition-colors duration-200 group-hover:text-blue-700">{{ $b['peminjam'] }}</p>
-                                                <p class="mt-0.5 text-xs text-gray-500 transition-colors duration-200 group-hover:text-gray-700">{{ $b['kelas'] }}</p>
+                                                <p class="mt-0.5 text-xs text-gray-500 transition-colors duration-200 group-hover:text-gray-700">{{ $b['kelas'] }} • Diajukan {{ $b['dibuat_f'] }}</p>
                                             </div>
                                         </td>
                                         <td class="px-4 py-5">
@@ -629,10 +652,10 @@
                     <div id="kartu-pinjam" class="xl:hidden grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach ($baris as $b)
                             @php $al = $b['alat_data']; @endphp
-                            <article class="baris-pinjam group {{ $b['terbaru'] ? '' : 'hidden' }} min-w-0 cursor-pointer rounded-2xl border border-gray-200/80 bg-white shadow-sm p-5 transition-all duration-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-2xl hover:shadow-blue-900/15 motion-safe:hover:-translate-y-1.5 active:scale-[0.98] active:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" tabindex="0" aria-label="Tinjau peminjaman {{ $al['nama'] }} oleh {{ $b['peminjam'] }}" data-url="{{ $b['detail_url'] }}" data-status="{{ $b['status'] }}" data-terbaru="{{ $b['terbaru'] ? '1' : '0' }}" data-label-status="{{ mb_strtolower($b['tampil']['label']) }}" data-tanggal="{{ $b['pinjam_ts'] }}">
+                            <article class="baris-pinjam group {{ $b['terbaru'] ? '' : 'hidden' }} min-w-0 cursor-pointer rounded-2xl border border-gray-200/80 bg-white shadow-sm p-5 transition-all duration-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-2xl hover:shadow-blue-900/15 motion-safe:hover:-translate-y-1.5 active:scale-[0.98] active:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" tabindex="0" aria-label="Tinjau peminjaman {{ $al['nama'] }} oleh {{ $b['peminjam'] }}" data-url="{{ $b['detail_url'] }}" data-status="{{ $b['status'] }}" data-terbaru="{{ $b['terbaru'] ? '1' : '0' }}" data-label-status="{{ mb_strtolower($b['tampil']['label']) }}" data-tanggal="{{ $b['dibuat_ts'] }}">
                                 <div class="pb-3 mb-3 border-b border-gray-100 transition-colors duration-200 group-hover:border-blue-200">
                                     <p class="font-semibold text-gray-900 leading-tight break-words transition-colors duration-200 group-hover:text-blue-700">{{ $b['peminjam'] }}</p>
-                                    <p class="mt-0.5 text-xs text-gray-500 break-words transition-colors duration-200 group-hover:text-gray-700">{{ $b['kelas'] }}</p>
+                                    <p class="mt-0.5 text-xs text-gray-500 break-words transition-colors duration-200 group-hover:text-gray-700">{{ $b['kelas'] }} • Diajukan {{ $b['dibuat_f'] }}</p>
                                 </div>
 
                                 <div class="flex items-center gap-3">
@@ -764,7 +787,7 @@
                         </p>
                     </div>
                     <div class="group relative rounded-2xl overflow-hidden shadow-sm border border-gray-200/80 transition-all duration-300 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-900/15 motion-safe:hover:-translate-y-1.5">
-                        <img src="{{ asset('images/tentang.jpg') }}" alt="Tentang SiLat" loading="lazy" class="w-full h-64 sm:h-80 object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-105">
+                        <img src="{{ asset('images/tentang.webp') }}" alt="Tentang SiLat" loading="lazy" class="w-full h-64 sm:h-80 object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-105">
 
                         <button type="button" data-ganti-gambar data-judul="Ganti Gambar Tentang SiLat" data-action="{{ $urlGambar }}" data-field="gambar" data-jenis="tentang" data-kunci="tentang" data-fit="cover"
                                 title="Ganti gambar" aria-label="Ganti gambar Tentang SiLat"
@@ -779,7 +802,7 @@
                 <!-- Tentang Ekskul Multimedia -->
                 <div class="grid md:grid-cols-2 gap-10 items-center">
                     <div class="group relative rounded-2xl overflow-hidden shadow-sm border border-gray-200/80 order-2 md:order-1 transition-all duration-300 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-900/15 motion-safe:hover:-translate-y-1.5">
-                        <img src="{{ asset('images/ekskul.jpg') }}" alt="Tentang Ekstrakurikuler Multimedia" loading="lazy" class="w-full h-64 sm:h-80 object-cover object-[50%_30%] transition-transform duration-700 ease-out motion-safe:group-hover:scale-105">
+                        <img src="{{ asset('images/ekskul.webp') }}" alt="Tentang Ekstrakurikuler Multimedia" loading="lazy" class="w-full h-64 sm:h-80 object-cover object-[50%_30%] transition-transform duration-700 ease-out motion-safe:group-hover:scale-105">
 
                         <button type="button" data-ganti-gambar data-judul="Ganti Gambar Ekskul Multimedia" data-action="{{ $urlGambar }}" data-field="gambar" data-jenis="tentang" data-kunci="ekskul" data-fit="cover"
                                 title="Ganti gambar" aria-label="Ganti gambar Ekskul Multimedia"

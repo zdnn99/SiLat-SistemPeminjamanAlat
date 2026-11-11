@@ -27,10 +27,16 @@ class DatabaseSequenceService
 
         self::$isRenumbering = true;
 
+        $driver = DB::connection()->getDriverName();
         $pdo = DB::connection()->getPdo();
 
         // Matikan sementara pengecekan foreign key agar renumbering transaksional aman tanpa bentrok
-        $pdo->exec('PRAGMA foreign_keys = OFF;');
+        if ($driver === 'sqlite') {
+            $pdo->exec('PRAGMA foreign_keys = OFF;');
+        } elseif ($driver === 'mysql') {
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0;');
+        }
+
         $pdo->beginTransaction();
 
         try {
@@ -62,53 +68,76 @@ class DatabaseSequenceService
                 ];
             }
 
-            // Eksekusi update Users dua tahap (ke nilai negatif dulu) agar tidak ada tabrakan PRIMARY KEY
+            $offset = 10000000;
+
+            // Eksekusi update Users dua tahap (ke nilai offset dulu) agar tidak ada tabrakan PRIMARY KEY
             foreach ($userMap as $oldId => $newId) {
-                $pdo->exec("UPDATE users SET id = -$newId WHERE id = $oldId");
+                $tempId = $oldId + $offset;
+                $pdo->exec("UPDATE users SET id = $tempId WHERE id = $oldId");
             }
             foreach ($userMap as $oldId => $newId) {
-                $pdo->exec("UPDATE users SET id = $newId WHERE id = -$newId");
+                $tempId = $oldId + $offset;
+                $pdo->exec("UPDATE users SET id = $newId WHERE id = $tempId");
             }
 
             // Eksekusi update Alat dua tahap
             foreach ($alatMap as $oldId => $newId) {
-                $pdo->exec("UPDATE alat SET id = -$newId WHERE id = $oldId");
+                $tempId = $oldId + $offset;
+                $pdo->exec("UPDATE alat SET id = $tempId WHERE id = $oldId");
             }
             foreach ($alatMap as $oldId => $newId) {
-                $pdo->exec("UPDATE alat SET id = $newId WHERE id = -$newId");
+                $tempId = $oldId + $offset;
+                $pdo->exec("UPDATE alat SET id = $newId WHERE id = $tempId");
             }
 
             // Eksekusi update Peminjaman (id, user_id, alat_id)
-            $stmt = $pdo->prepare('UPDATE peminjaman SET id = :new_id, user_id = :new_user_id, alat_id = :new_alat_id WHERE id = :old_id');
+            $stmt = $pdo->prepare('UPDATE peminjaman SET id = :temp_id, user_id = :new_user_id, alat_id = :new_alat_id WHERE id = :old_id');
             foreach ($peminjamanMap as $oldId => $info) {
                 $stmt->execute([
-                    ':new_id'      => -$info['new_id'],
+                    ':temp_id'     => $oldId + $offset,
                     ':new_user_id' => $info['new_user_id'],
                     ':new_alat_id' => $info['new_alat_id'],
                     ':old_id'      => $oldId,
                 ]);
             }
             foreach ($peminjamanMap as $oldId => $info) {
-                $pdo->exec("UPDATE peminjaman SET id = {$info['new_id']} WHERE id = -{$info['new_id']}");
+                $tempId = $oldId + $offset;
+                $pdo->exec("UPDATE peminjaman SET id = {$info['new_id']} WHERE id = {$tempId}");
             }
 
-            // Reset dan sinkronkan sqlite_sequence agar auto increment selanjutnya pas setelah ID terakhir
-            $pdo->exec("DELETE FROM sqlite_sequence WHERE name IN ('users', 'alat', 'peminjaman')");
+            // Reset dan sinkronkan sequence agar auto increment selanjutnya pas setelah ID terakhir
             $maxUser = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM users')->fetchColumn();
             $maxAlat = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM alat')->fetchColumn();
             $maxPem  = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM peminjaman')->fetchColumn();
 
-            $pdo->exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('users', $maxUser)");
-            $pdo->exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('alat', $maxAlat)");
-            $pdo->exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('peminjaman', $maxPem)");
+            if ($driver === 'sqlite') {
+                $pdo->exec("DELETE FROM sqlite_sequence WHERE name IN ('users', 'alat', 'peminjaman')");
+                $pdo->exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('users', $maxUser)");
+                $pdo->exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('alat', $maxAlat)");
+                $pdo->exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('peminjaman', $maxPem)");
+            }
 
-            $pdo->commit();
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
+
+            if ($driver === 'mysql') {
+                $pdo->exec('ALTER TABLE users AUTO_INCREMENT = ' . ($maxUser + 1));
+                $pdo->exec('ALTER TABLE alat AUTO_INCREMENT = ' . ($maxAlat + 1));
+                $pdo->exec('ALTER TABLE peminjaman AUTO_INCREMENT = ' . ($maxPem + 1));
+            }
         } catch (\Throwable $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             Log::error('Gagal merapikan urutan ID database: ' . $e->getMessage(), ['exception' => $e]);
             throw $e;
         } finally {
-            $pdo->exec('PRAGMA foreign_keys = ON;');
+            if ($driver === 'sqlite') {
+                $pdo->exec('PRAGMA foreign_keys = ON;');
+            } elseif ($driver === 'mysql') {
+                $pdo->exec('SET FOREIGN_KEY_CHECKS = 1;');
+            }
             self::$isRenumbering = false;
         }
 

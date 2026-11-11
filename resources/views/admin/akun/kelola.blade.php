@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kelola Akun - SiLat</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :where(a, button, input, select):focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
@@ -106,23 +106,34 @@
         $nama = $u->nama_lengkap;
         $kunciStatus = ($u->status_akun === 'minta_hapus' || $u->permintaan_hapus_pada) ? 'minta_hapus' : $u->status_akun;
 
+        // Cek apakah user punya peminjaman aktif (untuk menonaktifkan tombol Hapus)
+        $adaPeminjamanAktif = $u->peminjaman()
+            ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
+            ->exists();
+
         // Aksi yang tersedia mengikuti status akun (sama dengan aturan di controller)
         $aksi = match ($kunciStatus) {
             'menunggu' => [
-                ['label' => 'Setujui', 'kartu' => 'Setujui', 'url' => route('admin.akun.setujui', $u), 'method' => 'POST', 'gaya' => 'utama', 'ikon' => $ikonCentang, 'konfirmasi' => null],
-                ['label' => 'Tolak', 'kartu' => 'Tolak', 'url' => route('admin.akun.tolak', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSilang, 'konfirmasi' => "Tolak pendaftaran {$nama}? Data akun ini akan dihapus permanen."],
+                ['label' => 'Setujui', 'kartu' => 'Setujui', 'url' => route('admin.akun.setujui', $u), 'method' => 'POST', 'gaya' => 'utama', 'ikon' => $ikonCentang, 'konfirmasi' => null, 'dinonaktif' => false],
+                ['label' => 'Tolak', 'kartu' => 'Tolak', 'url' => route('admin.akun.tolak', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSilang, 'konfirmasi' => "Tolak pendaftaran {$nama}? Data akun ini akan dihapus permanen.", 'dinonaktif' => false],
             ],
             'aktif' => [
-                ['label' => 'Nonaktifkan', 'kartu' => 'Nonaktifkan Akun', 'url' => route('admin.akun.nonaktifkan', $u), 'method' => 'PATCH', 'gaya' => 'netral', 'ikon' => $ikonBlokir, 'konfirmasi' => "Nonaktifkan akun {$nama}? Akun tidak bisa masuk sampai diaktifkan kembali."],
+                ['label' => 'Nonaktifkan', 'kartu' => 'Nonaktifkan Akun', 'url' => route('admin.akun.nonaktifkan', $u), 'method' => 'PATCH', 'gaya' => 'netral', 'ikon' => $ikonBlokir, 'konfirmasi' => "Nonaktifkan akun {$nama}? Akun tidak bisa masuk sampai diaktifkan kembali.", 'dinonaktif' => false],
             ],
             'nonaktif' => [
-                ['label' => 'Aktifkan', 'kartu' => 'Aktifkan', 'url' => route('admin.akun.aktifkan', $u), 'method' => 'PATCH', 'gaya' => 'hijau', 'ikon' => $ikonAktif, 'konfirmasi' => null],
-                ['label' => 'Hapus', 'kartu' => 'Hapus', 'url' => route('admin.akun.hapus', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSampah, 'konfirmasi' => "Hapus permanen akun {$nama}? Tindakan ini tidak dapat dibatalkan."],
+                ['label' => 'Aktifkan', 'kartu' => 'Aktifkan', 'url' => route('admin.akun.aktifkan', $u), 'method' => 'PATCH', 'gaya' => 'hijau', 'ikon' => $ikonAktif, 'konfirmasi' => null, 'dinonaktif' => false],
+                ['label' => 'Hapus', 'kartu' => 'Hapus', 'url' => route('admin.akun.hapus', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSampah,
+                 'konfirmasi' => $adaPeminjamanAktif ? null : "Hapus permanen akun {$nama}? Tindakan ini tidak dapat dibatalkan.",
+                 'dinonaktif' => $adaPeminjamanAktif,
+                 'tooltip' => $adaPeminjamanAktif ? "Tidak dapat dihapus: {$nama} masih memiliki peminjaman aktif." : null],
             ],
             'minta_hapus' => [
-                ['label' => 'Hapus', 'kartu' => 'Setujui Hapus', 'url' => route('admin.akun.hapus', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSampah, 'konfirmasi' => "Setujui permintaan hapus akun {$nama}? Data akun ini akan dihapus permanen."],
-                ['label' => 'Aktifkan', 'kartu' => 'Tolak & Aktifkan', 'url' => route('admin.akun.batalHapus', $u), 'method' => 'PATCH', 'gaya' => 'hijau', 'ikon' => $ikonAktif, 'konfirmasi' => "Tolak permintaan hapus akun {$nama} dan pulihkan status akun menjadi aktif?"],
-                ['label' => 'Nonaktifkan', 'kartu' => 'Nonaktifkan', 'url' => route('admin.akun.nonaktifkan', $u), 'method' => 'PATCH', 'gaya' => 'netral', 'ikon' => $ikonBlokir, 'konfirmasi' => "Tolak permintaan hapus dan nonaktifkan akun {$nama}? Akun tidak bisa masuk sampai diaktifkan kembali."],
+                ['label' => 'Hapus', 'kartu' => 'Setujui Hapus', 'url' => route('admin.akun.hapus', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSampah,
+                 'konfirmasi' => $adaPeminjamanAktif ? null : "Setujui permintaan hapus akun {$nama}? Data akun ini akan dihapus permanen.",
+                 'dinonaktif' => $adaPeminjamanAktif,
+                 'tooltip' => $adaPeminjamanAktif ? "Tidak dapat dihapus: {$nama} masih memiliki peminjaman aktif." : null],
+                ['label' => 'Aktifkan', 'kartu' => 'Tolak & Aktifkan', 'url' => route('admin.akun.batalHapus', $u), 'method' => 'PATCH', 'gaya' => 'hijau', 'ikon' => $ikonAktif, 'konfirmasi' => "Tolak permintaan hapus akun {$nama} dan pulihkan status akun menjadi aktif?", 'dinonaktif' => false],
+                ['label' => 'Nonaktifkan', 'kartu' => 'Nonaktifkan', 'url' => route('admin.akun.nonaktifkan', $u), 'method' => 'PATCH', 'gaya' => 'netral', 'ikon' => $ikonBlokir, 'konfirmasi' => "Tolak permintaan hapus dan nonaktifkan akun {$nama}? Akun tidak bisa masuk sampai diaktifkan kembali.", 'dinonaktif' => false],
             ],
             default => [],
         };
@@ -149,7 +160,7 @@
     <header id="navbar" class="sticky top-0 z-50 border-b border-gray-200 bg-white transition-shadow duration-200">
         <div class="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8">
             <a href="{{ route('admin.dashboard') }}" class="group flex min-w-0 items-center gap-2 sm:gap-3">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="h-14 w-14 shrink-0 transition-transform duration-300 sm:h-18 sm:w-18 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="h-14 w-14 shrink-0 transition-transform duration-300 sm:h-18 sm:w-18 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
                 <div class="min-w-0">
                     <span class="block text-2xl font-extrabold leading-tight text-blue-600 transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="block truncate text-xs font-semibold text-gray-700 transition-colors duration-300 group-hover:text-gray-900">Sistem Peminjaman Alat</span>
@@ -378,10 +389,13 @@
                                 <td class="whitespace-nowrap px-5 py-5">
                                     <div class="flex items-center gap-2">
                                         @forelse ($b['aksi'] as $a)
-                                            <form method="POST" action="{{ $a['url'] }}" class="form-aksi"@if ($a['konfirmasi']) data-konfirmasi="{{ $a['konfirmasi'] }}"@endif>
+                                            @php $nonaktif = $a['dinonaktif'] ?? false; @endphp
+                                            <form method="POST" action="{{ $a['url'] }}" class="form-aksi"@if (!$nonaktif && $a['konfirmasi']) data-konfirmasi="{{ $a['konfirmasi'] }}"@endif>
                                                 @csrf
                                                 @method($a['method'])
-                                                <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 {{ $gayaAksi[$a['gaya']] }}">
+                                                <button type="submit" @disabled($nonaktif)
+                                                    @if (isset($a['tooltip']) && $a['tooltip']) title="{{ $a['tooltip'] }}" @endif
+                                                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 {{ $gayaAksi[$a['gaya']] }}">
                                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $a['ikon'] }}"/></svg>
                                                     {{ $a['label'] }}
                                                 </button>
@@ -439,10 +453,13 @@
                             <!-- mt-auto: tombol sejajar di dasar kartu walaupun tinggi isi kartu berbeda -->
                             <div class="mt-auto flex gap-2 border-t border-gray-100 pt-4 transition-colors duration-200 group-hover:border-blue-200">
                                 @foreach ($b['aksi'] as $a)
-                                    <form method="POST" action="{{ $a['url'] }}" class="form-aksi min-w-0 flex-1"@if ($a['konfirmasi']) data-konfirmasi="{{ $a['konfirmasi'] }}"@endif>
+                                    @php $nonaktif = $a['dinonaktif'] ?? false; @endphp
+                                    <form method="POST" action="{{ $a['url'] }}" class="form-aksi min-w-0 flex-1"@if (!$nonaktif && $a['konfirmasi']) data-konfirmasi="{{ $a['konfirmasi'] }}"@endif>
                                         @csrf
                                         @method($a['method'])
-                                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 {{ $gayaAksi[$a['gaya']] }}">{{ $a['kartu'] }}</button>
+                                        <button type="submit" @disabled($nonaktif)
+                                            @if (isset($a['tooltip']) && $a['tooltip']) title="{{ $a['tooltip'] }}" @endif
+                                            class="inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 {{ $gayaAksi[$a['gaya']] }}">{{ $a['kartu'] }}</button>
                                     </form>
                                 @endforeach
                             </div>

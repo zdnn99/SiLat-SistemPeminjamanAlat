@@ -42,6 +42,12 @@ class Alat extends Model
      */
     public function getJumlahSedangDipinjamAttribute(): int
     {
+        if ($this->relationLoaded('peminjaman')) {
+            return $this->peminjaman
+                ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
+                ->count();
+        }
+
         return $this->peminjaman()
             ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
             ->count();
@@ -67,6 +73,12 @@ class Alat extends Model
     {
         if ($this->tersedia) {
             return 'Tersedia';
+        }
+
+        if ($this->relationLoaded('peminjaman')) {
+            return $this->peminjaman->contains('status', 'dipinjam')
+                ? 'Dipinjam'
+                : 'Dipesan';
         }
 
         return $this->peminjaman()->where('status', 'dipinjam')->exists()
@@ -103,8 +115,15 @@ class Alat extends Model
             return '';
         }
 
-        return str_starts_with($this->foto, 'uploads/')
-            ? asset($this->foto)
-            : asset('images/alat/' . $this->foto . '1.jpg');
+        if (str_starts_with($this->foto, 'uploads/')) {
+            return asset($this->foto);
+        }
+
+        $base = 'images/alat/' . $this->foto . '1';
+        if (file_exists(public_path($base . '.webp'))) {
+            return asset($base . '.webp');
+        }
+
+        return asset($base . '.jpg');
     }
 }

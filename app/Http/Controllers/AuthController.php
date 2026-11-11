@@ -99,6 +99,17 @@ class AuthController extends Controller
             'kelas_jurusan' => ['nullable', 'required_if:peran,siswa', Rule::in($kelasValid)],
             'password' => 'required|string|min:6|confirmed',
             'pin' => 'required|digits:6',
+        ], [
+            'nomor_induk.unique' => 'Nomor Induk sudah terdaftar',
+            'nomor_induk.required' => 'Nomor Induk wajib diisi.',
+            'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
+            'peran.required' => 'Pilih peran Anda.',
+            'kelas_jurusan.required_if' => 'Pilih Kelas & Jurusan Anda.',
+            'password.required' => 'Kata sandi wajib diisi.',
+            'password.min' => 'Kata sandi minimal 6 karakter.',
+            'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+            'pin.required' => 'PIN Pemulihan wajib diisi.',
+            'pin.digits' => 'PIN Pemulihan harus 6 angka.',
         ]);
 
         User::create([

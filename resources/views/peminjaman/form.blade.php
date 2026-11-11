@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Form Peminjaman - SiLat Multimedia</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -98,7 +98,10 @@
 
         $fotoAlat = str_starts_with($alatDb->foto ?? '', 'uploads/')
             ? collect([$alatDb->foto_url, null, null])
-            : collect([1, 2, 3])->map(fn ($nomor) => asset('images/alat/' . $alat['foto'] . $nomor . '.jpg'));
+            : collect([1, 2, 3])->map(function ($nomor) use ($alat) {
+                $base = 'images/alat/' . $alat['foto'] . $nomor;
+                return file_exists(public_path($base . '.webp')) ? asset($base . '.webp') : asset($base . '.jpg');
+            });
 
         // Data untuk dropdown pencarian (klik alat -> form alat tersebut)
         $daftarPencarian = $alatDaftar->filter(fn ($a) => $a->tersedia)->map(function ($a) {
@@ -130,6 +133,7 @@
         $tampilKelas = $peran === 'siswa';
 
         $hariIni = now()->format('Y-m-d');
+        $maksMulai = now()->copy()->addMonthNoOverflow()->endOfMonth()->format('Y-m-d');
 
         // Kelas bersama untuk kolom isian. Border merah muncul otomatis lewat aria-invalid="true"
         // (diatur dari server saat ada error, dan dari JavaScript saat validasi di browser).
@@ -176,7 +180,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4 sm:gap-6">
             <!-- Logo & Brand -->
             <a href="{{ url('/dashboard') }}" class="group flex items-center gap-3 shrink-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="w-18 h-18 transition-transform duration-300 motion-safe:group-hover:scale-105">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="w-18 h-18 transition-transform duration-300 motion-safe:group-hover:scale-105">
                 <div>
                     <span class="text-blue-600 font-extrabold block leading-tight text-2xl transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="text-gray-700 font-semibold text-xs block">Sistem Peminjaman Alat</span>
@@ -433,7 +437,7 @@
                                     Tanggal Mulai Meminjam <span class="text-red-500">*</span>
                                 </label>
                                 <input id="tanggal_pinjam" type="date" name="tanggal_pinjam" required
-                                    min="{{ $hariIni }}" value="{{ old('tanggal_pinjam') }}"
+                                    min="{{ $hariIni }}" max="{{ $maksMulai }}" value="{{ old('tanggal_pinjam') }}"
                                     aria-invalid="{{ $errors->has('tanggal_pinjam') ? 'true' : 'false' }}"
                                     class="{{ $kelasInput }} cursor-pointer">
                                 <p id="info-mulai" class="text-xs text-gray-400 mt-1">Pilih tanggal mulai peminjaman</p>
@@ -727,6 +731,15 @@
                 kembali.setCustomValidity('');
                 if (dariPengguna) kembali.setAttribute('aria-invalid', 'false');
 
+                if (mulai.value) {
+                    if (mulai.max && mulai.value > mulai.max) {
+                        mulai.value = mulai.max;
+                    }
+                    if (mulai.min && mulai.value < mulai.min) {
+                        mulai.value = mulai.min;
+                    }
+                }
+
                 if (!mulai.value) {
                     kembali.value = '';
                     kembali.disabled = true;
@@ -744,8 +757,12 @@
                 kembali.min = keIso(awal);
                 kembali.max = keIso(akhir);
 
-                if (kembali.value && (kembali.value < kembali.min || kembali.value > kembali.max)) {
-                    kembali.value = '';
+                if (kembali.value) {
+                    if (kembali.value > kembali.max) {
+                        kembali.value = kembali.max;
+                    } else if (kembali.value < kembali.min) {
+                        kembali.value = kembali.min;
+                    }
                 }
 
                 infoMulai.textContent = format.format(awal);
@@ -764,14 +781,33 @@
             aturTanggal(false);
         })();
 
-        // ===== Penghitung karakter keperluan =====
+        // ===== Penghitung karakter keperluan & format huruf =====
         (function () {
             const keperluan = document.getElementById('keperluan');
             const hitung = document.getElementById('hitung-keperluan');
 
             function perbarui() { hitung.textContent = keperluan.value.length; }
 
-            keperluan.addEventListener('input', perbarui);
+            function formatKalimatTeks(val) {
+                if (!val) return '';
+                if (val.length > 3 && val === val.toUpperCase() && /[A-Z]/.test(val)) {
+                    val = val.toLowerCase();
+                }
+                return val.charAt(0).toUpperCase() + val.slice(1);
+            }
+
+            keperluan.addEventListener('input', function () {
+                if (this.value.length === 1) {
+                    this.value = this.value.toUpperCase();
+                }
+                perbarui();
+            });
+
+            keperluan.addEventListener('blur', function () {
+                this.value = formatKalimatTeks(this.value.trim());
+                perbarui();
+            });
+
             perbarui();
         })();
 

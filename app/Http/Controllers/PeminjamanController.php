@@ -68,7 +68,7 @@ class PeminjamanController extends Controller
     {
         $alatDb = Alat::where('slug', $slug)->firstOrFail();
         abort_unless($alatDb->tersedia, 404);
-        $alatDaftar = Alat::orderBy('id')->get();
+        $alatDaftar = Alat::with('peminjaman')->orderBy('id')->get();
 
         return view('peminjaman.form', compact('alatDb', 'alatDaftar'));
     }
@@ -78,12 +78,14 @@ class PeminjamanController extends Controller
      */
     public function store(Request $request)
     {
-        // Spasi di awal/akhir tidak dihitung sebagai isi keperluan
-        $request->merge(['keperluan' => trim((string) $request->input('keperluan'))]);
+        // Spasi di awal/akhir, format huruf pertama kapital, dan cegah capslock penuh
+        $request->merge(['keperluan' => $this->rapikan($request->input('keperluan'))]);
+
+        $maksMulai = now()->addMonthNoOverflow()->endOfMonth()->toDateString();
 
         $validated = $request->validate([
             'alat_id'         => ['required', 'exists:alat,id'],
-            'tanggal_pinjam'  => ['required', 'date', 'after_or_equal:today'],
+            'tanggal_pinjam'  => ['required', 'date', 'after_or_equal:today', 'before_or_equal:' . $maksMulai],
             'tanggal_kembali' => ['required', 'date', 'after_or_equal:tanggal_pinjam'],
             'keperluan'       => ['required', 'string', 'min:10', 'max:250'],
             'persetujuan'     => ['accepted'],
@@ -93,6 +95,7 @@ class PeminjamanController extends Controller
             'tanggal_pinjam.required'          => 'Tanggal mulai meminjam wajib diisi.',
             'tanggal_pinjam.date'              => 'Tanggal mulai tidak valid.',
             'tanggal_pinjam.after_or_equal'    => 'Tanggal mulai tidak boleh sebelum hari ini.',
+            'tanggal_pinjam.before_or_equal'   => 'Peminjaman hanya dapat diajukan untuk bulan ini dan bulan berikutnya.',
             'tanggal_kembali.required'         => 'Tanggal kembali wajib diisi.',
             'tanggal_kembali.date'             => 'Tanggal kembali tidak valid.',
             'tanggal_kembali.after_or_equal'   => 'Tanggal kembali tidak boleh sebelum tanggal mulai.',
@@ -164,5 +167,41 @@ class PeminjamanController extends Controller
 
         return redirect()->route('peminjaman.show', $peminjaman)
             ->with('sukses', 'Pengajuan peminjaman berhasil dikirim. Menunggu persetujuan admin.');
+    }
+
+    /**
+     * Membatalkan pengajuan peminjaman milik user sendiri.
+     * Hanya bisa dilakukan ketika status masih 'menunggu_persetujuan'.
+     */
+    public function batalkan(Peminjaman $peminjaman)
+    {
+        $user = Auth::user();
+
+        // Hanya pemilik peminjaman yang boleh membatalkan
+        abort_unless((int) $peminjaman->user_id === (int) $user->id, 404);
+
+        if ($peminjaman->status !== 'menunggu_persetujuan') {
+            return back()->with('galat', 'Pengajuan hanya bisa dibatalkan ketika masih menunggu persetujuan admin.');
+        }
+
+        $peminjaman->delete();
+
+        return redirect()->route('peminjaman.riwayat')
+            ->with('sukses', 'Pengajuan peminjaman berhasil dibatalkan.');
+    }
+
+    /** Merapikan spasi, mencegah capslock/lowercase penuh, dan memastikan huruf pertama kapital. */
+    private function rapikan(mixed $teks): string
+    {
+        $t = trim(preg_replace('/\s+/', ' ', (string) $teks));
+        if ($t === '') {
+            return '';
+        }
+
+        if (mb_strlen($t) > 3 && mb_strtoupper($t, 'UTF-8') === $t) {
+            $t = mb_strtolower($t, 'UTF-8');
+        }
+
+        return mb_strtoupper(mb_substr($t, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($t, 1, null, 'UTF-8');
     }
 }

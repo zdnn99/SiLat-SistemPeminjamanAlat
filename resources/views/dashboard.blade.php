@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beranda - SiLat Multimedia</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -182,9 +182,16 @@
             default => 'text-gray-400',
         };
 
+        $bisaAmbilNanti = $p->status === 'menunggu_pengambilan' && $pinjam->startOfDay()->gt($hariIni);
+        $tampilStatus   = $statusMap[$p->status];
+        if ($bisaAmbilNanti) {
+            $tampilStatus = array_merge($tampilStatus, ['label' => 'Disetujui']);
+        }
+
         // Keterangan singkat di kolom paling kanan. Semua berupa teks biasa dengan warna yang sama.
         $ket = match (true) {
-            $p->status === 'menunggu_persetujuan'      => 'Menunggu keputusan admin',
+            $p->status === 'menunggu_persetujuan'       => 'Menunggu keputusan admin',
+            $bisaAmbilNanti                             => 'Ambil alat pada tanggal ' . $pinjam->locale('id')->translatedFormat('j F') . ($p->catatan_pengambilan ? ' (' . $p->catatan_pengambilan . ')' : ''),
             $p->status === 'menunggu_pengambilan'       => $p->catatan_pengambilan ?: $p->catatan_admin ?: 'Menunggu pengambilan alat',
             $terlambat                                  => 'Terlambat ' . abs($sisa) . ' hari, segera kembalikan',
             $p->status === 'dipinjam' && $sisa === 0    => 'Kembalikan hari ini',
@@ -196,7 +203,7 @@
         return [
             'status'         => $p->status,
             'alat_data'      => $alatData,
-            'tampil'         => $statusMap[$p->status],
+            'tampil'         => $tampilStatus,
             'pinjam_f'       => $pinjam->locale('id')->translatedFormat('j M Y'),
             'kembali_f'      => $kembali->locale('id')->translatedFormat('j M Y'),
             'pengembalian'   => $pengembalian,
@@ -270,7 +277,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-6">
             <!-- Logo & Brand (di HP logo mengecil dan subjudul dipotong supaya tombol profil dan menu tidak terdorong keluar layar) -->
             <a href="{{ url('/dashboard') }}" class="group flex min-w-0 items-center gap-2 sm:gap-3 sm:shrink-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
                 <div class="min-w-0">
                     <span class="text-blue-600 font-extrabold block leading-tight text-2xl transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="text-gray-700 font-semibold text-xs block truncate transition-colors duration-300 group-hover:text-gray-900">Sistem Peminjaman Alat</span>

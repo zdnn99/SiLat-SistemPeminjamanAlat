@@ -179,20 +179,40 @@ class PeminjamanAdminController extends Controller
                 ]);
             }
 
-            $catatan = $validated['catatan'] ?? '';
-            $kolom = $peminjaman->status === 'menunggu_pengambilan' ? 'catatan_pengambilan' : 'catatan_admin';
+            $catatan = trim($validated['catatan'] ?? '');
+            if ($catatan !== '') {
+                $catatan = $this->rapikan($catatan);
+            }
 
-            $peminjaman->{$kolom} = $catatan !== '' ? $catatan : null;
+            if ($peminjaman->status === 'menunggu_pengambilan') {
+                $peminjaman->catatan_pengambilan = $catatan !== '' ? $catatan : null;
+            } elseif ($peminjaman->status === 'selesai') {
+                // Pertahankan format Catatan pengembalian secara terkunci & otomatis
+                $catatanBersih = preg_replace('/^Catatan pengembalian:\s*/i', '', $catatan);
+                $peminjaman->catatan_admin = $catatanBersih !== '' ? 'Catatan pengembalian: ' . $catatanBersih : null;
+            } else {
+                $peminjaman->catatan_admin = $catatan !== '' ? $catatan : null;
+            }
+
             $peminjaman->save();
         });
 
         return back()->with('sukses', 'Catatan admin berhasil diperbarui.');
     }
 
-    /** Merapikan spasi di awal dan akhir teks. */
+    /** Merapikan spasi, mencegah capslock/lowercase penuh, dan memastikan huruf pertama kapital. */
     private function rapikan(mixed $teks): string
     {
-        return trim((string) $teks);
+        $t = trim(preg_replace('/\s+/', ' ', (string) $teks));
+        if ($t === '') {
+            return '';
+        }
+
+        if (mb_strlen($t) > 3 && mb_strtoupper($t, 'UTF-8') === $t) {
+            $t = mb_strtolower($t, 'UTF-8');
+        }
+
+        return mb_strtoupper(mb_substr($t, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($t, 1, null, 'UTF-8');
     }
 
     private function pastikanStatus(Peminjaman $peminjaman, string $status): void

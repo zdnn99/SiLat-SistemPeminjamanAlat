@@ -223,8 +223,10 @@ class ProfilController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'password_hapus' => ['required', 'string'],
             'pin_hapus' => ['required', 'digits:6'],
         ], [
+            'password_hapus.required' => 'Masukkan kata sandi akun.',
             'pin_hapus.required' => 'Masukkan PIN Pemulihan untuk konfirmasi penghapusan akun.',
             'pin_hapus.digits' => 'PIN Pemulihan terdiri dari 6 angka.',
         ]);
@@ -233,17 +235,31 @@ class ProfilController extends Controller
             return $this->kembali('hapus-akun')->withErrors($validator);
         }
 
+        if (! Hash::check($request->input('password_hapus'), $user->password)) {
+            return $this->kembali('hapus-akun')->withErrors(['password_hapus' => 'Kata sandi salah.']);
+        }
+
         if ($pesan = $this->pinBermasalah($user, (string) $request->input('pin_hapus'))) {
             return $this->kembali('hapus-akun')->withErrors(['pin_hapus' => $pesan]);
         }
 
-        $peminjamanAktif = \App\Models\Peminjaman::where('user_id', $user->id)
-            ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
+        $peminjamanMenunggu = \App\Models\Peminjaman::where('user_id', $user->id)
+            ->where('status', 'menunggu_persetujuan')
             ->exists();
 
-        if ($peminjamanAktif) {
+        if ($peminjamanMenunggu) {
             return $this->kembali('hapus-akun')->withErrors([
-                'pin_hapus' => 'Penghapusan akun tidak dapat diajukan karena masih ada peminjaman yang sedang aktif atau menunggu keputusan.',
+                'pin_hapus' => 'Batalkan atau selesaikan peminjaman Anda terlebih dahulu sebelum menghapus akun.',
+            ]);
+        }
+
+        $peminjamanAktifLain = \App\Models\Peminjaman::where('user_id', $user->id)
+            ->whereIn('status', ['menunggu_pengambilan', 'dipinjam'])
+            ->exists();
+
+        if ($peminjamanAktifLain) {
+            return $this->kembali('hapus-akun')->withErrors([
+                'pin_hapus' => 'Selesaikan peminjaman Anda terlebih dahulu sebelum menghapus akun.',
             ]);
         }
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil Saya - SiLat Multimedia</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -86,7 +86,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2 sm:gap-4">
             <!-- Logo & Brand -->
             <a href="{{ $urlBeranda }}" class="group flex min-w-0 items-center gap-2 sm:gap-3 xl:shrink-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-105">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-105">
                 <div class="min-w-0">
                     <span class="text-blue-600 font-extrabold block leading-tight text-2xl transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="hidden sm:block truncate text-gray-700 font-semibold text-xs">Sistem Peminjaman Alat</span>
@@ -100,9 +100,9 @@
                 @endforeach
             </nav>
 
-            <!-- Profil dropdown (hanya layar xl ke atas) + tombol Dashboard -->
+            <!-- Profil dropdown + tombol Dashboard -->
             <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
-                <div class="hidden xl:block">
+                <div>
                     @include('partials.profil-dropdown')
                 </div>
 
@@ -368,32 +368,10 @@
                 </form>
             </section>
 
-            <!-- ===== Akun: Keluar + Hapus Akun (siswa dan guru) ===== -->
+            <!-- ===== Hapus Akun (khusus siswa dan guru) ===== -->
             @unless($isAdmin)
-                <section id="akun" class="min-w-0 bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5 sm:p-7 flex flex-col transition-all duration-300 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-900/15">
-
-                    <!-- Keluar dari Akun -->
-                    <div id="keluar" class="flex flex-wrap items-start gap-x-3.5 gap-y-4 pb-6">
-                        <span class="w-10 h-10 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition-all duration-300 hover:bg-blue-600 hover:text-white hover:shadow-lg hover:shadow-blue-600/25 motion-safe:hover:-translate-y-0.5 motion-safe:hover:scale-110">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                            </svg>
-                        </span>
-                        <div class="flex-1 min-w-[10rem]">
-                            <h2 class="text-lg font-bold text-gray-900 leading-tight transition-colors duration-300 hover:text-blue-700">Keluar dari Akun</h2>
-                            <p class="text-sm text-gray-500 mt-0.5 transition-colors duration-200 hover:text-gray-700">Akhiri sesi kamu di perangkat ini.</p>
-                        </div>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit"
-                                class="bg-white hover:bg-red-50 text-gray-700 hover:text-red-600 border border-gray-300 hover:border-red-300 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:scale-[0.98]">
-                                Keluar
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Hapus Akun (permanen, perlu persetujuan admin) -->
-                    <div id="hapus-akun" class="mt-auto border-t border-gray-200 pt-6">
+                <section id="hapus-akun" class="min-w-0 scroll-mt-24 bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:border-red-300 hover:shadow-2xl hover:shadow-red-900/15">
+                    <div>
                         <div class="flex items-start gap-3.5 mb-5">
                             <span class="w-10 h-10 shrink-0 rounded-xl bg-red-50 text-red-600 flex items-center justify-center transition-all duration-300 hover:bg-red-600 hover:text-white hover:shadow-lg hover:shadow-red-600/25 motion-safe:hover:-translate-y-0.5 motion-safe:hover:scale-110">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -427,47 +405,28 @@
                             <form id="form-hapus" method="POST" action="{{ $urlHapusAjukan }}" data-siap="{{ $hapusSiap ? '1' : '0' }}" class="flex flex-col gap-4" autocomplete="off">
                                 @csrf
 
-                                <x-field-sandi id="pin_hapus" name="pin_hapus" label="PIN Pemulihan (6 Angka)"
-                                    placeholder="Masukkan 6 digit PIN Pemulihan" :angka="true"
-                                    bantuan="Dibutuhkan untuk mengajukan penghapusan akun." />
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <x-field-sandi id="password_hapus" name="password_hapus" label="Kata Sandi Akun"
+                                        placeholder="Masukkan kata sandi saat ini"
+                                        bantuan="Dibutuhkan untuk verifikasi akun." />
 
-                                <button type="submit"
-                                    @disabled(! $hapusSiap)
-                                    class="self-start bg-white hover:bg-red-50 text-red-700 border border-red-300 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white enabled:hover:shadow-md enabled:hover:shadow-red-600/20 motion-safe:enabled:hover:-translate-y-0.5 enabled:active:scale-[0.98]">
-                                    Ajukan Penghapusan Akun
-                                </button>
+                                    <x-field-sandi id="pin_hapus" name="pin_hapus" label="PIN Pemulihan (6 Angka)"
+                                        placeholder="Masukkan 6 digit PIN Pemulihan" :angka="true"
+                                        bantuan="Dibutuhkan untuk konfirmasi hapus." />
+                                </div>
+
+                                <div class="pt-2">
+                                    <button type="submit"
+                                        @disabled(! $hapusSiap)
+                                        class="self-start bg-white text-red-700 border border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-red-700 disabled:hover:border-red-300 enabled:hover:shadow-lg enabled:hover:shadow-red-600/25 motion-safe:enabled:hover:-translate-y-0.5 enabled:active:scale-[0.98] cursor-pointer">
+                                        Ajukan Penghapusan Akun
+                                    </button>
+                                </div>
                             </form>
                         @endif
                     </div>
-
                 </section>
             @endunless
-
-            <!-- ===== Keluar khusus admin ===== 
-                 Di layar xl ke atas admin keluar lewat profil dropdown di navbar. Di bawah xl dropdown disembunyikan,
-                 jadi kartu ini muncul sebagai gantinya supaya admin tetap bisa keluar dari halaman ini. -->
-            @if($isAdmin)
-                <section id="keluar-admin" class="xl:hidden lg:col-span-2 min-w-0 bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5 sm:p-7 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-900/15">
-                    <div class="flex flex-wrap items-start gap-x-3.5 gap-y-4">
-                        <span class="w-10 h-10 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition-all duration-300 hover:bg-blue-600 hover:text-white hover:shadow-lg hover:shadow-blue-600/25 motion-safe:hover:-translate-y-0.5 motion-safe:hover:scale-110">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                            </svg>
-                        </span>
-                        <div class="flex-1 min-w-[10rem]">
-                            <h2 class="text-lg font-bold text-gray-900 leading-tight transition-colors duration-300 hover:text-blue-700">Keluar dari Akun</h2>
-                            <p class="text-sm text-gray-500 mt-0.5 transition-colors duration-200 hover:text-gray-700">Akhiri sesi kamu di perangkat ini.</p>
-                        </div>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit"
-                                class="bg-white hover:bg-red-50 text-gray-700 hover:text-red-600 border border-gray-300 hover:border-red-300 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:scale-[0.98]">
-                                Keluar
-                            </button>
-                        </form>
-                    </div>
-                </section>
-            @endif
         </div>
 
     </main>
@@ -671,7 +630,9 @@
         });
 
         pasangForm('form-hapus', null, function (f) {
-            return { berubah: true, sah: f.elements.pin_hapus.value.length === 6 };
+            var pin = f.elements.pin_hapus ? f.elements.pin_hapus.value : '';
+            var pass = f.elements.password_hapus ? f.elements.password_hapus.value : '';
+            return { berubah: true, sah: pin.length === 6 && pass.length >= 1 };
         });
 
         // ===== Hapus Akun: konfirmasi, dan cegah kirim jika backend belum dipasang =====

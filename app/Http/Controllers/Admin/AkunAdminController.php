@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Peminjaman;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -185,6 +186,18 @@ class AkunAdminController extends Controller
     {
         if ($user->peran === 'admin') {
             return back()->with('galat_akun', 'Akun admin tidak bisa dihapus dari sini.');
+        }
+
+        // Blokir penghapusan jika user masih punya peminjaman aktif
+        $peminjamanAktif = Peminjaman::where('user_id', $user->id)
+            ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
+            ->exists();
+
+        if ($peminjamanAktif) {
+            return back()->with(
+                'galat_akun',
+                'Tidak dapat menghapus akun ' . $user->nama_lengkap . ' karena masih memiliki peminjaman aktif (menunggu persetujuan, menunggu pengambilan, atau sedang dipinjam).'
+            );
         }
 
         $nama = $user->nama_lengkap;

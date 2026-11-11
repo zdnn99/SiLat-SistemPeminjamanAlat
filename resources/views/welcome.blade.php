@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiLat Multimedia - Sistem Peminjaman Alat</title>
     <meta name="description" content="SiLat adalah sistem peminjaman alat multimedia Ekstrakurikuler Multimedia SMK Negeri 5 Surakarta.">
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -132,7 +132,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
             <!-- Logo & Brand -->
             <a href="{{ url('/') }}" class="group flex items-center gap-3 shrink-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="w-18 h-18 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="w-18 h-18 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
                 <div>
                     <span class="text-blue-600 group-hover:text-blue-700 transition-colors duration-300 font-extrabold block leading-tight text-2xl">SiLat</span>
                     <span class="text-gray-700 group-hover:text-gray-900 transition-colors duration-300 font-semibold text-xs block">Sistem Peminjaman Alat</span>
@@ -287,14 +287,14 @@
                     </p>
                 </div>
                 <div class="group rounded-2xl overflow-hidden shadow-sm border border-gray-200/80 transition-all duration-300 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-900/15 motion-safe:hover:-translate-y-1.5">
-                    <img src="{{ asset('images/tentang.jpg') }}" alt="Tentang SiLat" loading="lazy" class="w-full h-64 sm:h-80 object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-110">
+                    <img src="{{ asset('images/tentang.webp') }}" alt="Tentang SiLat" loading="lazy" class="w-full h-64 sm:h-80 object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-110">
                 </div>
             </div>
 
             <!-- Tentang Ekskul Multimedia -->
             <div class="grid md:grid-cols-2 gap-10 items-center">
                 <div class="group rounded-2xl overflow-hidden shadow-sm border border-gray-200/80 order-2 md:order-1 transition-all duration-300 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-900/15 motion-safe:hover:-translate-y-1.5">
-                    <img src="{{ asset('images/ekskul.jpg') }}" alt="Tentang Ekstrakurikuler Multimedia" loading="lazy" class="w-full h-64 sm:h-80 object-cover object-[50%_30%] transition-transform duration-700 ease-out motion-safe:group-hover:scale-110">
+                    <img src="{{ asset('images/ekskul.webp') }}" alt="Tentang Ekstrakurikuler Multimedia" loading="lazy" class="w-full h-64 sm:h-80 object-cover object-[50%_30%] transition-transform duration-700 ease-out motion-safe:group-hover:scale-110">
                 </div>
                 <div class="group order-1 md:order-2">
                     <span class="text-blue-600 font-semibold text-sm uppercase tracking-wide transition-colors duration-300 group-hover:text-blue-800">Tentang</span>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail Peminjaman - SiLat Multimedia</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -110,6 +110,9 @@
         'ditolak'              => ['label' => 'Ditolak',              'badge' => 'bg-red-100 text-red-700',       'dot' => 'bg-red-500'],
     ];
     $status = $statusMap[$kunci];
+    if ($kunci === 'menunggu_pengambilan' && $pinjam->startOfDay()->gt($hariIni)) {
+        $status['label'] = 'Disetujui';
+    }
 
     // Banner status: teks dan warna menyesuaikan kondisi
     $gayaBanner = [
@@ -130,9 +133,13 @@
             'judul' => 'Pengajuanmu sedang menunggu persetujuan admin',
             'isi'   => 'Admin akan memverifikasi pengajuan ini. Kamu bisa mengambil alat di Ekskul Multimedia setelah pengajuan disetujui.',
         ],
+        $kunci === 'menunggu_pengambilan' && $pinjam->startOfDay()->gt($hariIni) => [
+            'judul' => 'Pengajuan disetujui',
+            'isi'   => 'Ambil alat pada tanggal ' . $pinjam->locale('id')->translatedFormat('j F') . ($catAmbil ? '. Tempat pengambilan: ' . $catAmbil : '') . '. Hitung mundur pengembalian dimulai setelah alat dicatat diambil.',
+        ],
         $kunci === 'menunggu_pengambilan' => [
             'judul' => 'Pengajuan disetujui, menunggu pengambilan',
-            'isi'   => 'Anda dapat mengambil alat setelah peminjaman disetujui, mulai ' . $tglHari($pinjam) . '. Hitung mundur pengembalian dimulai setelah alat dicatat diambil.',
+            'isi'   => 'Anda dapat mengambil alat hari ini di Ekskul Multimedia' . ($catAmbil ? ' (' . $catAmbil . ')' : '') . '. Hitung mundur pengembalian dimulai setelah alat dicatat diambil.',
         ],
         $kunci === 'dipinjam' && $terlambat => [
             'judul' => 'Terlambat ' . $hariTelat . ' hari',
@@ -167,6 +174,10 @@
             $kunci === 'menunggu_persetujuan' => [
                 'judul' => 'Pengajuan ini menunggu keputusan admin',
                 'isi'   => 'Periksa data peminjam dan jadwalnya, lalu setujui atau tolak melalui bagian Tindakan.',
+            ],
+            $kunci === 'menunggu_pengambilan' && $pinjam->startOfDay()->gt($hariIni) => [
+                'judul' => 'Disetujui, pengambilan mulai ' . $pinjam->locale('id')->translatedFormat('j F'),
+                'isi'   => 'Peminjam dapat mengambil alat mulai tanggal ' . $pinjam->locale('id')->translatedFormat('j F') . '. Catat pengambilan di bagian Tindakan saat alat diserahkan.',
             ],
             $kunci === 'menunggu_pengambilan' => [
                 'judul' => 'Disetujui, menunggu pengambilan alat',
@@ -252,6 +263,8 @@
         ? ($catAmbil ?: $catAdmin)
         : $catAdmin;
 
+    $isiCatatanBersih = $catatanAdminTampil ? trim(preg_replace('/^Catatan pengembalian:\s*/i', '', $catatanAdminTampil)) : '';
+
     // Admin boleh mengubah catatan setelah pengajuan diputuskan (saat masih menunggu persetujuan belum ada catatan)
     $bolehUbahCatatan = $admin && $p->status !== 'menunggu_persetujuan';
     $catatanWajib     = $p->status !== 'selesai';
@@ -272,7 +285,7 @@
     <header id="navbar" class="bg-white border-b border-gray-200 sticky top-0 z-50 transition-shadow duration-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-6">
             <a href="{{ $dashboardUrl }}" class="group flex min-w-0 items-center gap-2 sm:gap-3">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-105">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="w-14 h-14 shrink-0 sm:w-18 sm:h-18 transition-transform duration-300 motion-safe:group-hover:scale-105">
                 <div class="min-w-0">
                     <span class="text-blue-600 font-extrabold block leading-tight text-2xl transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="text-gray-700 font-semibold text-xs block truncate">Sistem Peminjaman Alat</span>
@@ -290,19 +303,26 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex-grow w-full min-w-0">
 
         @if (session('sukses'))
-            <div role="status" class="flex items-start gap-2 bg-green-50 border border-green-200 text-green-700 text-sm font-medium px-4 py-3 rounded-xl mb-6">
-                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <div id="toast-sukses" role="status" aria-live="polite"
+                class="fixed top-24 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-semibold shadow-xl transition-opacity duration-500">
+                <svg class="w-5 h-5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
                 <span class="min-w-0 break-words">{{ session('sukses') }}</span>
             </div>
         @endif
 
         @if ($errors->any())
-            <div role="alert" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6 text-sm">
-                <ul class="list-disc pl-5 space-y-1">
+            <div id="toast-galat" role="alert" aria-live="assertive"
+                class="fixed top-24 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-semibold shadow-xl transition-opacity duration-500">
+                <svg class="w-5 h-5 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                <div class="min-w-0 break-words flex-1">
                     @foreach ($errors->all() as $error)
-                        <li class="break-words">{{ $error }}</li>
+                        <p>{{ $error }}</p>
                     @endforeach
-                </ul>
+                </div>
             </div>
         @endif
 
@@ -342,12 +362,30 @@
             </div>
         </div>
 
+        {{-- Tombol Batalkan Pengajuan (hanya untuk user, hanya ketika masih menunggu persetujuan) --}}
+        @if (!$admin && $p->status === 'menunggu_persetujuan')
+            <div class="mb-5 sm:mb-6">
+                <form method="POST" action="{{ route('peminjaman.batalkan', $p) }}"
+                      data-konfirmasi-batal="Batalkan pengajuan peminjaman ini? Tindakan tidak dapat dibatalkan.">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-md hover:shadow-red-600/25 motion-safe:hover:-translate-y-0.5 active:scale-[0.98]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Batalkan Pengajuan
+                    </button>
+                </form>
+            </div>
+        @endif
+
         <div class="grid gap-5 sm:gap-6 lg:grid-cols-5 lg:items-start">
 
             <!-- KIRI: kartu alat (ikut menempel saat halaman digulir di layar lebar) -->
             <section class="min-w-0 lg:col-span-2 lg:sticky lg:top-28 bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden transition-all duration-300 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-900/15">
                 <div class="group relative aspect-[4/3] bg-white border-b border-gray-100 overflow-hidden">
-                    <img src="{{ asset('images/alat/' . $alat['foto'] . '1.jpg') }}" alt="{{ $namaAlat }}" loading="lazy"
+                    <img src="{{ !empty($peminjaman->alat?->foto_url) ? $peminjaman->alat->foto_url : (file_exists(public_path('images/alat/' . $alat['foto'] . '1.webp')) ? asset('images/alat/' . $alat['foto'] . '1.webp') : asset('images/alat/' . $alat['foto'] . '1.jpg')) }}" alt="{{ $namaAlat }}" loading="lazy"
                          onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');"
                          class="absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-500 ease-out motion-safe:group-hover:scale-110">
                     <div class="hidden absolute inset-0 flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-300 [&:not(.hidden)]:flex">
@@ -558,7 +596,7 @@
                                         <span>Jika disetujui, peminjam dapat mengambil alat mulai {{ $tgl($pinjam) }}.</span>
                                     </p>
 
-                                    <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 motion-safe:hover:-translate-y-0.5 active:scale-[0.98]">
+                                    <button type="submit" id="tombol-setujui" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 motion-safe:hover:-translate-y-0.5 active:scale-[0.98] disabled:cursor-not-allowed">
                                         Setujui Pengajuan
                                     </button>
                                 </form>
@@ -566,15 +604,15 @@
                                 <form method="POST" action="{{ route('admin.peminjaman.tolak', $p) }}" class="min-w-0 space-y-4 border-t border-gray-100 pt-6 xl:border-t-0 xl:pt-0">
                                     @csrf
                                     <div>
-                                        <label for="catatan_admin" class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <label for="alasan_tolak" class="block text-sm font-medium text-gray-700 mb-1.5">
                                             Tulis Alasan Penolakan <span class="text-red-500">*</span>
                                         </label>
-                                        <textarea id="catatan_admin" name="catatan_admin" rows="3" maxlength="500" required
+                                        <textarea id="alasan_tolak" name="catatan_admin" rows="3" maxlength="500" required
                                             placeholder="Jelaskan alasan pengajuan tidak dapat disetujui."
                                             class="{{ $kelasTeks }}">{{ old('catatan_admin') }}</textarea>
                                     </div>
 
-                                    <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-red-300 bg-white text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-600 hover:border-red-600 hover:text-white hover:shadow-lg hover:shadow-red-600/30 active:scale-[0.98]">
+                                    <button type="submit" id="tombol-tolak" class="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-red-300 bg-white text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-600 hover:border-red-600 hover:text-white hover:shadow-lg hover:shadow-red-600/30 active:scale-[0.98] disabled:cursor-not-allowed">
                                         Tolak Pengajuan
                                     </button>
                                 </form>
@@ -618,10 +656,10 @@
                                 </div>
 
                                 <div>
-                                    <label for="catatan_admin" class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    <label for="catatan_pengembalian_admin" class="block text-sm font-medium text-gray-700 mb-1.5">
                                         Catatan pengembalian <span class="font-normal text-gray-400">(opsional)</span>
                                     </label>
-                                    <textarea id="catatan_admin" name="catatan_admin" rows="3" maxlength="500"
+                                    <textarea id="catatan_pengembalian_admin" name="catatan_admin" rows="3" maxlength="500"
                                         placeholder="Contoh: Lensa kit ada goresan halus di bagian depan."
                                         class="{{ $kelasTeks }}">{{ old('catatan_admin') }}</textarea>
                                 </div>
@@ -662,11 +700,11 @@
                         </div>
 
                         <div class="space-y-4">
-                            @if ($kunci === 'selesai')
-                                <div class="group/sel rounded-lg p-2 -m-2 transition-all duration-200 hover:bg-blue-50 hover:shadow-sm">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 transition-colors duration-200 group-hover/sel:text-blue-600">Kondisi alat saat dikembalikan</p>
+                            @if ($kunci === 'selesai' && $p->kondisi_alat_kembali)
+                                <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-4 transition-all duration-200">
+                                    <p class="text-xs font-bold uppercase tracking-wider text-blue-600">Kondisi Alat Saat Dikembalikan</p>
                                     <p class="mt-1.5">
-                                        <span class="inline-block rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700 transition-colors duration-200 group-hover/sel:bg-white">{{ $p->kondisi_alat_kembali ?: 'Tidak dicatat' }}</span>
+                                        <span class="inline-block rounded-full bg-white px-3.5 py-1 text-sm font-bold text-blue-800 border border-blue-200 shadow-sm">{{ $p->kondisi_alat_kembali }}</span>
                                     </p>
                                 </div>
                             @endif
@@ -674,11 +712,16 @@
                             <!-- Tampilan catatan -->
                             <div id="tampil-catatan" class="space-y-4" @if ($bolehUbahCatatan && $formUbahTerbuka) hidden @endif>
                                 @if ($catatanAdminTampil)
-                                    <div class="group/sel rounded-xl border border-gray-100 bg-gray-50 px-4 py-3.5 transition-all duration-200 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md hover:shadow-blue-900/5">
-                                        <p class="text-sm leading-relaxed text-gray-700 whitespace-pre-line break-words transition-colors duration-200 group-hover/sel:text-gray-900">{{ $catatanAdminTampil }}</p>
+                                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 transition-all duration-200 hover:border-blue-200 hover:bg-blue-50/40 hover:shadow-md hover:shadow-blue-900/5">
+                                        @if ($kunci === 'selesai')
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Catatan Pengembalian</p>
+                                            <p class="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-line break-words">{{ $isiCatatanBersih }}</p>
+                                        @else
+                                            <p class="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-line break-words">{{ $catatanAdminTampil }}</p>
+                                        @endif
                                     </div>
                                 @elseif ($kunci === 'selesai')
-                                    <p class="text-sm leading-relaxed text-gray-500">Admin tidak menambahkan catatan lain.</p>
+                                    <p class="text-sm leading-relaxed text-gray-500">Admin tidak menambahkan catatan pengembalian.</p>
                                 @else
                                     <p class="text-sm leading-relaxed text-gray-500">Belum ada catatan.</p>
                                 @endif
@@ -701,7 +744,13 @@
                                     @method('PATCH')
                                     <div>
                                         <label for="ubah_catatan" class="block text-sm font-medium text-gray-700 mb-1.5">
-                                            {{ $p->status === 'menunggu_pengambilan' ? 'Catatan tempat pengambilan' : 'Catatan admin' }}
+                                            @if ($p->status === 'selesai')
+                                                Catatan pengembalian
+                                            @elseif ($p->status === 'menunggu_pengambilan')
+                                                Catatan tempat pengambilan
+                                            @else
+                                                Catatan admin
+                                            @endif
                                             @if ($catatanWajib)
                                                 <span class="text-red-500">*</span>
                                             @else
@@ -710,7 +759,7 @@
                                         </label>
                                         <textarea id="ubah_catatan" name="catatan" rows="4" maxlength="500" @if ($catatanWajib) required @endif
                                             placeholder="Tulis catatan untuk pengajuan ini."
-                                            class="{{ $kelasTeks }}">{{ old('catatan', $catatanAdminTampil) }}</textarea>
+                                            class="{{ $kelasTeks }}">{{ old('catatan', ($kunci === 'selesai' ? $isiCatatanBersih : $catatanAdminTampil)) }}</textarea>
                                         <p class="mt-1.5 text-xs leading-relaxed text-gray-500">{{ $petunjukCatatan }}</p>
                                     </div>
 
@@ -787,6 +836,107 @@
             if (tombolBatal) tombolBatal.addEventListener('click', function () {
                 if (kolom) kolom.value = isiAwal;
                 atur(false);
+            });
+        })();
+
+        // Format teks kapitalisasi & cegah capslock penuh
+        function formatTeksOtomatis(el) {
+            if (!el) return;
+            function bersihkan(val) {
+                if (!val) return '';
+                if (val.length > 3 && val === val.toUpperCase() && /[A-Z]/.test(val)) {
+                    val = val.toLowerCase();
+                }
+                return val.charAt(0).toUpperCase() + val.slice(1);
+            }
+            el.addEventListener('input', function () {
+                if (this.value.length === 1) {
+                    this.value = this.value.toUpperCase();
+                }
+            });
+            el.addEventListener('blur', function () {
+                this.value = bersihkan(this.value.trim());
+            });
+        }
+
+        ['catatan_pengambilan', 'alasan_tolak', 'catatan_serah_terima', 'catatan_pengembalian_admin', 'ubah_catatan'].forEach(function (id) {
+            formatTeksOtomatis(document.getElementById(id));
+        });
+
+        // Item 10: Saling kunci antara form Setujui dan Tolak
+        (function () {
+            var txtSetujui = document.getElementById('catatan_pengambilan');
+            var btnSetujui = document.getElementById('tombol-setujui');
+            var txtTolak = document.getElementById('alasan_tolak');
+            var btnTolak = document.getElementById('tombol-tolak');
+
+            if (!txtSetujui || !txtTolak) return;
+
+            function cekKunci() {
+                var adaSetujui = txtSetujui.value.trim().length > 0;
+                var adaTolak = txtTolak.value.trim().length > 0;
+
+                if (adaSetujui) {
+                    txtTolak.disabled = true;
+                    txtTolak.classList.add('bg-gray-100', 'cursor-not-allowed', 'opacity-60');
+                    if (btnTolak) {
+                        btnTolak.disabled = true;
+                        btnTolak.classList.add('opacity-40', 'cursor-not-allowed');
+                    }
+                } else {
+                    txtTolak.disabled = false;
+                    txtTolak.classList.remove('bg-gray-100', 'cursor-not-allowed', 'opacity-60');
+                    if (btnTolak) {
+                        btnTolak.disabled = false;
+                        btnTolak.classList.remove('opacity-40', 'cursor-not-allowed');
+                    }
+                }
+
+                if (adaTolak) {
+                    txtSetujui.disabled = true;
+                    txtSetujui.classList.add('bg-gray-100', 'cursor-not-allowed', 'opacity-60');
+                    if (btnSetujui) {
+                        btnSetujui.disabled = true;
+                        btnSetujui.classList.add('opacity-40', 'cursor-not-allowed');
+                    }
+                } else if (!adaSetujui) {
+                    txtSetujui.disabled = false;
+                    txtSetujui.classList.remove('bg-gray-100', 'cursor-not-allowed', 'opacity-60');
+                    if (btnSetujui) {
+                        btnSetujui.disabled = false;
+                        btnSetujui.classList.remove('opacity-40', 'cursor-not-allowed');
+                    }
+                }
+            }
+
+            txtSetujui.addEventListener('input', cekKunci);
+            txtTolak.addEventListener('input', cekKunci);
+            cekKunci();
+        })();
+
+        // Auto-dismiss toast
+        (function () {
+            var ts = document.getElementById('toast-sukses');
+            if (ts) {
+                setTimeout(function () { ts.classList.add('opacity-0'); }, 4000);
+                setTimeout(function () { ts.remove(); }, 4600);
+            }
+            var tg = document.getElementById('toast-galat');
+            if (tg) {
+                setTimeout(function () { tg.classList.add('opacity-0'); }, 4000);
+                setTimeout(function () { tg.remove(); }, 4600);
+            }
+        })();
+
+        // Konfirmasi tombol batalkan pengajuan
+        (function () {
+            var formBatal = document.querySelector('[data-konfirmasi-batal]');
+            if (!formBatal) return;
+            formBatal.addEventListener('submit', function (e) {
+                var pesan = formBatal.getAttribute('data-konfirmasi-batal');
+                if (!window.confirm(pesan)) {
+                    e.preventDefault();
+                }
             });
         })();
     </script>

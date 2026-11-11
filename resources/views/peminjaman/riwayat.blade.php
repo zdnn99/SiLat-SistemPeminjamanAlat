@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Riwayat Peminjaman - SiLat Multimedia</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 text-gray-900 antialiased flex flex-col min-h-screen overflow-x-clip">
@@ -89,19 +89,26 @@
             $p->status === 'dipinjam' => 'text-gray-600',
             default => 'text-gray-400',
         };
+        $bisaAmbilNanti = $p->status === 'menunggu_pengambilan' && $pinjam->startOfDay()->gt($hariIni);
+        $tampilStatus   = $statusMap[$p->status];
+        if ($bisaAmbilNanti) {
+            $tampilStatus = array_merge($tampilStatus, ['label' => 'Disetujui']);
+        }
+
         $ket = match (true) {
-            $p->status === 'menunggu_persetujuan'      => 'Menunggu keputusan admin',
-            $p->status === 'menunggu_pengambilan'       => $p->catatan_admin ?: 'Menunggu pengambilan alat',
+            $p->status === 'menunggu_persetujuan'       => 'Menunggu keputusan admin',
+            $bisaAmbilNanti                             => 'Ambil alat pada tanggal ' . $pinjam->locale('id')->translatedFormat('j F') . ($p->catatan_pengambilan ? ' (' . $p->catatan_pengambilan . ')' : ''),
+            $p->status === 'menunggu_pengambilan'       => $p->catatan_pengambilan ?: $p->catatan_admin ?: 'Menunggu pengambilan alat',
             $terlambat                                  => 'Terlambat ' . abs($sisa) . ' hari, segera kembalikan',
             $p->status === 'dipinjam' && $sisa === 0    => 'Kembalikan hari ini',
             $p->status === 'dipinjam'                   => 'Kembali ' . $sisa . ' hari lagi',
             $p->status === 'selesai'                    => $p->kondisi_alat_kembali ? 'Dikembalikan, kondisi ' . mb_strtolower($p->kondisi_alat_kembali) : 'Sudah dikembalikan',
-            default                                     => $p->catatan_admin ? $p->catatan_admin : 'Pengajuan tidak disetujui',
+            default                                     => $p->catatan_admin ?: 'Pengajuan tidak disetujui',
         };
 
         return [
             'alat'               => $al,
-            'tampil'             => $statusMap[$p->status],
+            'tampil'             => $tampilStatus,
             'pinjam_f'           => $pinjam->locale('id')->translatedFormat('j M Y'),
             'kembali_f'          => $kembali->locale('id')->translatedFormat('j M Y'),
             'pengembalian'       => $pengembalian,
@@ -117,7 +124,7 @@
     <header id="navbar" class="sticky top-0 z-50 border-b border-gray-200 bg-white transition-shadow duration-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-6">
             <a href="{{ route('dashboard') }}" class="group flex min-w-0 items-center gap-2 sm:gap-3">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo SiLat" class="h-14 w-14 shrink-0 transition-transform duration-300 sm:h-18 sm:w-18 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo SiLat" class="h-14 w-14 shrink-0 transition-transform duration-300 sm:h-18 sm:w-18 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-3">
                 <div class="min-w-0">
                     <span class="block text-2xl font-extrabold leading-tight text-blue-600 transition-colors duration-300 group-hover:text-blue-700">SiLat</span>
                     <span class="block truncate text-xs font-semibold text-gray-700 transition-colors duration-300 group-hover:text-gray-900">Sistem Peminjaman Alat</span>
@@ -131,6 +138,20 @@
     </header>
 
     <main class="mx-auto w-full min-w-0 max-w-7xl flex-grow px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+
+        {{-- Flash messages --}}
+        @if (session('sukses'))
+            <div role="status" class="mb-5 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                <svg class="h-5 w-5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>{{ session('sukses') }}</span>
+            </div>
+        @endif
+        @if (session('galat'))
+            <div role="alert" class="mb-5 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                <svg class="h-5 w-5 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>{{ session('galat') }}</span>
+            </div>
+        @endif
 
         <!-- Kiri: judul dan subjudul. Kanan: filter (di bawah layar xl, filter turun ke bawah judul) -->
         <div class="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
@@ -218,7 +239,7 @@
                                     <td class="px-6 py-5">
                                         <div class="flex items-center gap-3.5 transition-transform duration-300 motion-safe:group-hover:translate-x-1.5">
                                             <div class="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white transition-all duration-300 group-hover:border-blue-400 group-hover:shadow-md group-hover:ring-2 group-hover:ring-blue-500/20">
-                                                <img src="{{ asset('images/alat/' . $al['foto'] . '1.jpg') }}" alt="" loading="lazy"
+                                                <img src="{{ file_exists(public_path('images/alat/' . $al['foto'] . '1.webp')) ? asset('images/alat/' . $al['foto'] . '1.webp') : asset('images/alat/' . $al['foto'] . '1.jpg') }}" alt="" loading="lazy"
                                                      onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');"
                                                      class="h-full w-full object-contain p-0.5 transition-transform duration-300 motion-safe:group-hover:scale-125">
                                                 <div class="absolute inset-0 hidden items-center justify-center bg-blue-50 text-blue-400 [&:not(.hidden)]:flex">
@@ -257,7 +278,7 @@
                     <article class="baris-pinjam group min-w-0 cursor-pointer rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-2xl hover:shadow-blue-900/15 active:scale-[0.98] active:border-blue-400 active:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 motion-safe:hover:-translate-y-1.5" tabindex="0" aria-label="Lihat detail peminjaman {{ $al['nama'] }}" data-url="{{ $b['detail_url'] }}">
                         <div class="flex items-center gap-3">
                             <div class="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white transition-all duration-300 group-hover:border-blue-400 group-hover:shadow-md group-hover:ring-2 group-hover:ring-blue-500/20">
-                                <img src="{{ asset('images/alat/' . $al['foto'] . '1.jpg') }}" alt="" loading="lazy"
+                                <img src="{{ file_exists(public_path('images/alat/' . $al['foto'] . '1.webp')) ? asset('images/alat/' . $al['foto'] . '1.webp') : asset('images/alat/' . $al['foto'] . '1.jpg') }}" alt="" loading="lazy"
                                      onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');"
                                      class="h-full w-full object-contain p-0.5 transition-transform duration-300 motion-safe:group-hover:scale-125">
                                 <div class="absolute inset-0 hidden items-center justify-center bg-blue-50 text-blue-400 [&:not(.hidden)]:flex">

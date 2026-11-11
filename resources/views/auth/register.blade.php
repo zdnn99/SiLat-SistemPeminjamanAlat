@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar - SiLat Multimedia</title>
-    <link rel="icon" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/logo.webp') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 font-sans antialiased text-gray-900">
@@ -43,14 +43,14 @@
         <!-- Sisi Kiri (Visual / Branding), hanya tampil di layar lebar -->
         <div class="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-center items-center p-12 relative overflow-hidden">
             <!-- Background Image Studio Blur -->
-            <img src="{{ asset('images/register.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-35">
+            <img src="{{ asset('images/register.webp') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-35">
             <!-- Overlay sedikit dipertebal supaya teks di atas foto kontrasnya aman -->
             <div class="absolute inset-0 bg-gradient-to-br from-blue-900/85 via-slate-900/88 to-slate-900/95"></div>
 
             <div class="relative z-10 text-center text-white max-w-sm px-4">
                 <!-- Logo Eskul (bisa diklik, kembali ke beranda) -->
                 <a href="{{ url('/') }}" aria-label="Kembali ke beranda SiLat" class="inline-block mb-6 transition duration-300 hover:scale-105 active:scale-95">
-                    <img src="{{ asset('images/logonew.png') }}" alt="Logo Ekskul Multimedia" class="w-32 h-32 object-contain mx-auto drop-shadow-xl">
+                    <img src="{{ asset('images/logonew.webp') }}" alt="Logo Ekskul Multimedia" class="w-32 h-32 object-contain mx-auto drop-shadow-xl">
                 </a>
 
                 <h1 class="text-4xl font-extrabold mb-2 tracking-tight">SiLat Multimedia</h1>
@@ -78,7 +78,7 @@
         <div class="relative isolate w-full lg:w-1/2 flex flex-col bg-white lg:overflow-y-auto">
 
             <!-- Latar tipis (hanya HP/tablet) -->
-            <img src="{{ asset('images/register.jpg') }}" alt="" aria-hidden="true" loading="lazy"
+            <img src="{{ asset('images/register.webp') }}" alt="" aria-hidden="true" loading="lazy"
                 class="lg:hidden absolute inset-0 -z-10 w-full h-full object-cover opacity-[0.35] pointer-events-none select-none">
             <div class="lg:hidden absolute inset-0 -z-10 bg-gradient-to-b from-blue-50/30 to-white/20 pointer-events-none"></div>
 
@@ -86,7 +86,7 @@
             <header class="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200/80">
                 <div class="flex items-center justify-between h-16 px-4 sm:px-6">
                     <a href="{{ url('/') }}" aria-label="SiLat, ke beranda" class="group flex items-center gap-2.5 transition active:scale-95">
-                        <img src="{{ asset('images/logo.png') }}" alt="" class="w-9 h-9 object-contain transition duration-200 group-hover:scale-110">
+                        <img src="{{ asset('images/logo.webp') }}" alt="" class="w-9 h-9 object-contain transition duration-200 group-hover:scale-110">
                         <span class="text-xl font-extrabold text-blue-600 tracking-tight">SiLat</span>
                     </a>
                     <a href="{{ url('/') }}" class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/30 transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95">
@@ -107,7 +107,11 @@
                         <div role="alert" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">
                             <ul class="list-disc pl-5 space-y-1">
                                 @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
+                                    @if ($error === 'Nomor Induk sudah terdaftar' || str_contains($error, 'has already been taken'))
+                                        <li>Silahkan login atau jika ada kendala, hubungi admin/temui secara langsung.</li>
+                                    @else
+                                        <li>{{ $error }}</li>
+                                    @endif
                                 @endforeach
                             </ul>
                         </div>

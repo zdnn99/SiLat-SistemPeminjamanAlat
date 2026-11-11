@@ -18,6 +18,10 @@ class Banner
             return asset('uploads/banner/' . basename($file[0])) . '?v=' . filemtime($file[0]);
         }
 
+        if (file_exists(public_path('images/banner.webp'))) {
+            return asset('images/banner.webp');
+        }
+
         return asset('images/banner.jpg');
     }
 }
