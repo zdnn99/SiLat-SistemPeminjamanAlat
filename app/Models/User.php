@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\RenumbersOnDelete;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -31,7 +32,7 @@ class User extends Authenticatable
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array<int, string>
+     * @var array<string>
      */
     protected $hidden = [
         'password',
@@ -47,7 +48,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',
+            'password'              => 'hashed',
             'permintaan_hapus_pada' => 'datetime',
         ];
     }
@@ -58,5 +59,13 @@ class User extends Authenticatable
     public function getFotoUrlAttribute(): ?string
     {
         return $this->foto_profil ? asset('uploads/profil/' . $this->foto_profil) : null;
+    }
+
+    /**
+     * Semua peminjaman milik user ini.
+     */
+    public function peminjaman(): HasMany
+    {
+        return $this->hasMany(Peminjaman::class);
     }
 }

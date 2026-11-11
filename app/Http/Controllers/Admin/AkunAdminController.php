@@ -67,7 +67,11 @@ class AkunAdminController extends Controller
             default   => $query->orderByDesc('created_at')->orderByDesc('id'),
         };
 
-        $users = $query->paginate(15)->withQueryString();
+        $users = $query->with(['peminjaman' => function ($q) {
+            // Hanya load peminjaman aktif agar bisa dicek di blade tanpa query tambahan
+            $q->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
+              ->select('id', 'user_id', 'status');
+        }])->paginate(15)->withQueryString();
 
         $totalSemua        = User::where('peran', '!=', 'admin')->count();
         $jumlahAktif       = User::where('peran', '!=', 'admin')->where('status_akun', 'aktif')->count();

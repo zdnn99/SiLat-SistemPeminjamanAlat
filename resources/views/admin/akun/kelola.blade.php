@@ -106,10 +106,8 @@
         $nama = $u->nama_lengkap;
         $kunciStatus = ($u->status_akun === 'minta_hapus' || $u->permintaan_hapus_pada) ? 'minta_hapus' : $u->status_akun;
 
-        // Cek apakah user punya peminjaman aktif (untuk menonaktifkan tombol Hapus)
-        $adaPeminjamanAktif = $u->peminjaman()
-            ->whereIn('status', ['menunggu_persetujuan', 'menunggu_pengambilan', 'dipinjam'])
-            ->exists();
+        // Cek apakah user punya peminjaman aktif (sudah di-eager-load, tidak ada query tambahan)
+        $adaPeminjamanAktif = $u->peminjaman->isNotEmpty();
 
         // Aksi yang tersedia mengikuti status akun (sama dengan aturan di controller)
         $aksi = match ($kunciStatus) {
