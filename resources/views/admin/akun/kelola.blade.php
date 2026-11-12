@@ -92,6 +92,7 @@
     $ikonBlokir  = 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636';
     $ikonAktif   = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
     $ikonSampah  = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
+    $ikonUrungkan = 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6';
 
     // Gaya tombol aksi
     $gayaAksi = [
@@ -99,10 +100,11 @@
         'hijau'  => 'bg-green-600 text-white shadow-sm hover:bg-green-700 hover:shadow-md hover:shadow-green-600/30',
         'netral' => 'border border-gray-300 bg-white text-gray-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700',
         'bahaya' => 'border border-red-200 bg-white text-red-600 hover:border-red-400 hover:bg-red-50',
+        'pulih'  => 'border border-green-300 bg-white text-green-700 hover:border-green-500 hover:bg-green-50',
     ];
 
     // Satu kali olah data untuk tabel (layar lebar) dan kartu (layar kecil)
-    $baris = $users->getCollection()->map(function ($u) use ($statusBadge, $ikonCentang, $ikonSilang, $ikonBlokir, $ikonAktif, $ikonSampah) {
+    $baris = $users->getCollection()->map(function ($u) use ($statusBadge, $ikonCentang, $ikonSilang, $ikonBlokir, $ikonAktif, $ikonSampah, $ikonUrungkan) {
         $nama = $u->nama_lengkap;
         $kunciStatus = ($u->status_akun === 'minta_hapus' || $u->permintaan_hapus_pada) ? 'minta_hapus' : $u->status_akun;
 
@@ -126,12 +128,11 @@
                  'tooltip' => $adaPeminjamanAktif ? "Tidak dapat dihapus: {$nama} masih memiliki peminjaman aktif." : null],
             ],
             'minta_hapus' => [
-                ['label' => 'Hapus', 'kartu' => 'Setujui Hapus', 'url' => route('admin.akun.hapus', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSampah,
+                ['label' => 'Hapus', 'kartu' => 'Hapus', 'url' => route('admin.akun.hapus', $u), 'method' => 'DELETE', 'gaya' => 'bahaya', 'ikon' => $ikonSampah,
                  'konfirmasi' => $adaPeminjamanAktif ? null : "Setujui permintaan hapus akun {$nama}? Data akun ini akan dihapus permanen.",
                  'dinonaktif' => $adaPeminjamanAktif,
                  'tooltip' => $adaPeminjamanAktif ? "Tidak dapat dihapus: {$nama} masih memiliki peminjaman aktif." : null],
-                ['label' => 'Aktifkan', 'kartu' => 'Tolak & Aktifkan', 'url' => route('admin.akun.batalHapus', $u), 'method' => 'PATCH', 'gaya' => 'hijau', 'ikon' => $ikonAktif, 'konfirmasi' => "Tolak permintaan hapus akun {$nama} dan pulihkan status akun menjadi aktif?", 'dinonaktif' => false],
-                ['label' => 'Nonaktifkan', 'kartu' => 'Nonaktifkan', 'url' => route('admin.akun.nonaktifkan', $u), 'method' => 'PATCH', 'gaya' => 'netral', 'ikon' => $ikonBlokir, 'konfirmasi' => "Tolak permintaan hapus dan nonaktifkan akun {$nama}? Akun tidak bisa masuk sampai diaktifkan kembali.", 'dinonaktif' => false],
+                ['label' => 'Tolak Hapus', 'kartu' => 'Tolak Hapus', 'url' => route('admin.akun.batalHapus', $u), 'method' => 'PATCH', 'gaya' => 'pulih', 'ikon' => $ikonUrungkan, 'konfirmasi' => "Tolak permintaan hapus akun {$nama}? Akun akan kembali aktif.", 'dinonaktif' => false],
             ],
             default => [],
         };
@@ -204,7 +205,7 @@
                     <a href="{{ route('admin.akun.kelola') }}" class="order-last inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-center text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95 sm:col-span-2 sm:justify-self-start lg:order-first lg:col-span-1 lg:justify-self-auto">Atur ulang</a>
                 @endif
 
-                <!-- Cari: nama, nomor induk, atau kelas/jurusan (hanya huruf, angka, dan spasi; huruf otomatis kapital) -->
+                <!-- Cari: nama, nomor induk, atau kelas/jurusan (hanya huruf, angka, dan spasi; huruf otomatis kapital). Pencarian dijalankan dengan menekan Enter -->
                 <div class="group min-w-0 sm:col-span-2 lg:col-span-1">
                     <label for="cari" class="mb-1 block text-sm font-medium text-gray-700 transition-colors duration-200 group-hover:text-blue-700">Cari akun</label>
                     <div class="flex h-11 w-full items-stretch overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm transition-all duration-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-900/10 lg:w-56 motion-safe:hover:-translate-y-0.5">
@@ -381,7 +382,7 @@
                                         <span class="h-1.5 w-1.5 rounded-full {{ $b['st']['dot'] }}"></span>{{ $b['st']['label'] }}
                                     </span>
                                     @if ($b['waktuMinta'])
-                                        <p class="mt-1 text-[11px] font-medium text-red-600">Diajukan {{ $b['waktuMinta'] }}</p>
+                                        <p class="mt-2 text-xs leading-snug text-gray-500">Diajukan<br><span class="font-semibold text-red-600">{{ $b['waktuMinta'] }}</span></p>
                                     @endif
                                 </td>
                                 <td class="whitespace-nowrap px-5 py-5">
@@ -447,6 +448,10 @@
                             </div>
                         </dl>
 
+                        @if ($b['waktuMinta'])
+                            <p class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 transition-colors duration-200 group-hover:bg-red-100">Diajukan <span class="font-semibold">{{ $b['waktuMinta'] }}</span></p>
+                        @endif
+
                         @if (count($b['aksi']))
                             <!-- mt-auto: tombol sejajar di dasar kartu walaupun tinggi isi kartu berbeda -->
                             <div class="mt-auto flex gap-2 border-t border-gray-100 pt-4 transition-colors duration-200 group-hover:border-blue-200">
@@ -489,10 +494,9 @@
         })();
 
         // Pencarian: hanya huruf, angka, dan spasi; huruf otomatis menjadi kapital.
-        // Dikirim otomatis setelah berhenti mengetik; dropdown langsung terkirim.
+        // Pencarian baru dijalankan saat admin menekan Enter, tidak otomatis saat mengetik.
         const formAkun = document.getElementById('filter-akun');
         const cariAkun = document.getElementById('cari');
-        let jedaPencarian;
 
         // Posisi kursor dijaga supaya mengetik di tengah teks tidak melompat ke akhir.
         function bersihkanPencarian() {
@@ -511,32 +515,25 @@
             // Jangan ganggu keyboard HP yang sedang menyusun kata (komposisi)
             if (event.isComposing) return;
             bersihkanPencarian();
-
-            // Tandai bahwa halaman dimuat ulang karena mengetik (bukan karena mengganti filter)
-            try { sessionStorage.setItem('fokusCariAkun', '1'); } catch (e) {}
-            clearTimeout(jedaPencarian);
-            jedaPencarian = setTimeout(function () { formAkun.requestSubmit(); }, 450);
         });
 
         // Setelah komposisi selesai, bersihkan sekali lagi
         cariAkun.addEventListener('compositionend', bersihkanPencarian);
 
+        // Enter = jalankan pencarian
+        cariAkun.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            event.preventDefault();
+            bersihkanPencarian();
+            formAkun.requestSubmit();
+        });
+
+        // Mengganti filter status atau peran tetap langsung diterapkan
         formAkun.querySelectorAll('select').forEach(function (pilihan) {
             pilihan.addEventListener('change', function () {
-                try { sessionStorage.removeItem('fokusCariAkun'); } catch (e) {}
                 formAkun.requestSubmit();
             });
         });
-
-        // Setelah dimuat ulang karena mengetik, kursor kembali ke akhir teks.
-        // Tidak dilakukan saat mengganti filter agar keyboard HP tidak muncul sendiri.
-        try {
-            if (sessionStorage.getItem('fokusCariAkun') === '1' && cariAkun.value !== '') {
-                cariAkun.focus();
-                cariAkun.setSelectionRange(cariAkun.value.length, cariAkun.value.length);
-            }
-            sessionStorage.removeItem('fokusCariAkun');
-        } catch (e) {}
 
         // Menu urutkan: buka/tutup lewat tombol, tutup saat klik di luar atau tekan Esc
         document.querySelectorAll('[data-menu-urut]').forEach(function (menu) {

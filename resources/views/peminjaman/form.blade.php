@@ -40,10 +40,11 @@
 <body class="bg-gray-50 text-gray-900 antialiased flex flex-col min-h-screen">
 
     @php
-        // TODO: ganti dengan Alat::all() setelah AlatSeeder dibuat (daftar ini sama dengan di welcome.blade.php).
+        // Katalog bawaan 8 alat awal. HANYA dipakai sebagai isian cadangan (deskripsi, kelengkapan, awalan foto)
+        // kalau kolomnya masih kosong di database. Alat yang ditambahkan admin tidak perlu ada di daftar ini.
+        // TODO: hapus setelah semua data alat lengkap di database (sama dengan $bawaan di admin/alat/edit.blade.php).
         // 'foto' = awalan nama file di public/images/alat/, lalu ditambah angka 1, 2, 3 dan .jpg
         // (contoh: 'sony' -> sony1.jpg, sony2.jpg, sony3.jpg; 'drone1-' -> drone1-1.jpg, drone1-2.jpg, drone1-3.jpg).
-        // 'deskripsi' dan 'kelengkapan' masih DRAFT, cocokkan dengan kondisi alat sebenarnya di ekskul.
         $alatList = [
             [
                 'slug' => 'sony-mirrorless', 'foto' => 'sony', 'nama' => 'Sony Mirrorless Camera', 'sub' => 'Sony A6000',
@@ -87,27 +88,39 @@
             ],
         ];
 
-        // Alat yang sedang dibuka, diambil dari slug di URL
-        $alat = collect($alatList)->firstWhere('slug', request()->route('slug'));
-        abort_unless($alat, 404);
-        $alat['nama'] = $alatDb->nama_alat;
-        $alat['sub'] = $alatDb->deskripsi ?? $alat['sub'];
-        $alat['deskripsi'] = $alatDb->deskripsi ?? $alat['deskripsi'];
-        $alat['foto'] = $alatDb->foto ?? $alat['foto'];
-        $alat['kelengkapan'] = $alatDb->kelengkapan ?? $alat['kelengkapan'];
+        // PERBAIKAN: alat yang sedang dibuka selalu berasal dari database ($alatDb), sehingga alat baru
+        // yang ditambahkan admin ikut bisa dibuka (dulu dicari di daftar tetap di atas lalu 404 kalau tidak ada).
+        // Entri katalog bawaan (kalau ada untuk slug ini) hanya dipakai sebagai isian cadangan.
+        $katalog = collect($alatList)->firstWhere('slug', $alatDb->slug) ?? [];
 
-        $fotoAlat = str_starts_with($alatDb->foto ?? '', 'uploads/')
-            ? collect([$alatDb->foto_url, null, null])
-            : collect([1, 2, 3])->map(function ($nomor) use ($alat) {
+        $alat = [
+            'slug'        => $alatDb->slug,
+            'nama'        => $alatDb->nama_alat,
+            'sub'         => $alatDb->subjudul ?: ($katalog['sub'] ?? ''),
+            'deskripsi'   => $alatDb->deskripsi ?: ($katalog['deskripsi'] ?? ''),
+            'foto'        => $alatDb->foto ?: ($katalog['foto'] ?? null),
+            'kelengkapan' => $alatDb->kelengkapan ?: ($katalog['kelengkapan'] ?? []),
+        ];
+
+        // Foto unggahan admin: satu foto besar. Foto bawaan: awalan + angka 1, 2, 3 (.webp diutamakan, lalu .jpg).
+        // Alat baru tanpa foto: semua slot null, galeri menampilkan ikon "Foto belum tersedia".
+        if (str_starts_with($alatDb->foto ?? '', 'uploads/')) {
+            $fotoAlat = collect([$alatDb->foto_url, null, null]);
+        } elseif (! empty($alat['foto'])) {
+            $fotoAlat = collect([1, 2, 3])->map(function ($nomor) use ($alat) {
                 $base = 'images/alat/' . $alat['foto'] . $nomor;
                 return file_exists(public_path($base . '.webp')) ? asset($base . '.webp') : asset($base . '.jpg');
             });
+        } else {
+            $fotoAlat = collect([null, null, null]);
+        }
 
         // Data untuk dropdown pencarian (klik alat -> form alat tersebut)
+        // 'sub' memakai subjudul dari model, sama dengan welcome.blade.php.
         $daftarPencarian = $alatDaftar->filter(fn ($a) => $a->tersedia)->map(function ($a) {
             return [
                 'nama' => $a->nama_alat,
-                'sub'  => $a->deskripsi ?? '',
+                'sub'  => $a->subjudul ?? '',
                 'foto' => $a->foto_url,
                 'url'  => route('peminjaman.create', $a->slug),
             ];
@@ -268,18 +281,32 @@
                     <!-- Kelengkapan -->
                     <div class="group/kel border-t border-gray-100 mt-6 pt-6">
                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wide transition-colors duration-200 group-hover/kel:text-blue-600">Kelengkapan Alat</p>
-                        <p class="text-sm text-gray-500 mt-1 mb-3">Yang kamu dapatkan saat meminjam alat ini:</p>
+                        
+                        @if (count($alat['kelengkapan']) > 0)
+                            <p class="text-sm text-gray-500 mt-1 mb-3">Yang kamu dapatkan saat meminjam alat ini:</p>
 
-                        <ul class="grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
-                            @foreach ($alat['kelengkapan'] as $item)
-                                <li class="group flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-sm text-gray-700 transition-all duration-200 hover:border-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-600/25 motion-safe:hover:translate-x-1.5 motion-safe:hover:scale-[1.03]">
-                                    <svg class="w-4 h-4 shrink-0 text-blue-600 transition-all duration-200 group-hover:text-white motion-safe:group-hover:scale-125" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            <ul class="grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+                                @foreach ($alat['kelengkapan'] as $item)
+                                    <li class="group flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-sm text-gray-700 transition-all duration-200 hover:border-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-600/25 motion-safe:hover:translate-x-1.5 motion-safe:hover:scale-[1.03]">
+                                        <svg class="w-4 h-4 shrink-0 text-blue-600 transition-all duration-200 group-hover:text-white motion-safe:group-hover:scale-125" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        <span>{{ $item }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <!-- Tampilan jika kelengkapan kosong -->
+                            <div class="group/kosong mt-2 flex flex-col items-center justify-center rounded-xl border border-blue-100 bg-blue-50 px-4 py-6 text-center transition-all duration-300 hover:border-blue-300 hover:bg-blue-100/70 hover:shadow-md hover:shadow-blue-900/10">
+                                <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm transition-all duration-300 group-hover/kosong:bg-blue-600 group-hover/kosong:text-white group-hover/kosong:shadow-lg group-hover/kosong:shadow-blue-600/25 motion-safe:group-hover/kosong:-translate-y-0.5 motion-safe:group-hover/kosong:scale-110">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                     </svg>
-                                    <span>{{ $item }}</span>
-                                </li>
-                            @endforeach
-                        </ul>
+                                </span>
+                                <p class="mt-3 text-sm font-semibold text-blue-900 transition-colors duration-200 group-hover/kosong:text-blue-700">Informasi kelengkapan belum tersedia</p>
+                                <p class="mt-1 max-w-[16rem] text-xs leading-relaxed text-gray-600 transition-colors duration-200 group-hover/kosong:text-gray-900">Alat ini mungkin tidak memiliki kelengkapan tambahan, atau datanya belum diinput oleh Admin. Silakan konfirmasi langsung saat pengambilan alat.</p>
+                            </div>
+                        @endif
 
                         <p class="group mt-4 flex items-start gap-2 text-xs text-gray-600 transition-colors duration-200 hover:text-gray-900">
                             <svg class="w-4 h-4 mt-0.5 shrink-0 text-blue-500 transition-all duration-200 group-hover:text-blue-700 motion-safe:group-hover:scale-125" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -671,7 +698,7 @@
 
             searchDropdown.innerHTML = daftar.map(function (alat) {
                 return '<a href="' + escapeHtml(alat.url) + '" class="group w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors">' +
-                    '<img src="' + escapeHtml(alat.foto) + '" alt="" onerror="fotoRusak(this)" class="w-10 h-10 rounded-lg object-contain shrink-0 bg-blue-50 transition-transform duration-200 group-hover:scale-105">' +
+                    '<img src="' + escapeHtml(alat.foto || '') + '" alt="" onerror="fotoRusak(this)" class="w-10 h-10 rounded-lg object-contain shrink-0 bg-blue-50 transition-transform duration-200 group-hover:scale-105">' +
                     '<span class="flex-1 min-w-0">' +
                         '<span class="block text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">' + highlightMatch(alat.nama, kata) + '</span>' +
                         '<span class="block text-xs text-gray-400 truncate">' + highlightMatch(alat.sub, kata) + '</span>' +

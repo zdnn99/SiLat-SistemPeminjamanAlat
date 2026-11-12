@@ -39,14 +39,19 @@ class ProfilController extends Controller
 
         $user = Auth::user();
         $file = $request->file('foto');
+        $fotoLama = $user->foto_profil;
         $namaDasar = 'user-' . $user->id . '-' . time();
         $targetDir = public_path(self::FOLDER_FOTO);
         $namaFile = app(ImageService::class)->saveAsWebp($file, $targetDir, $namaDasar, maxWidth: 800, maxHeight: 800);
 
-        $this->hapusFileFoto($user);
-
         $user->foto_profil = $namaFile;
         $user->save();
+
+        // Foto lama dihapus SETELAH database tersimpan, dan hanya bila namanya berbeda.
+        // Kalau namanya sama (dua unggahan dalam detik yang sama), menghapusnya berarti menghapus foto baru.
+        if ($fotoLama && $fotoLama !== $namaFile) {
+            $this->hapusFileFoto($fotoLama);
+        }
 
         return back()->with('sukses_foto', 'Foto profil berhasil diperbarui.');
     }
@@ -57,11 +62,12 @@ class ProfilController extends Controller
     public function hapusFoto(): RedirectResponse
     {
         $user = Auth::user();
-
-        $this->hapusFileFoto($user);
+        $fotoLama = $user->foto_profil;
 
         $user->foto_profil = null;
         $user->save();
+
+        $this->hapusFileFoto($fotoLama);
 
         return back()->with('sukses_foto', 'Foto profil dihapus. Tampilan kembali ke inisial nama.');
     }
@@ -313,10 +319,14 @@ class ProfilController extends Controller
         return null;
     }
 
-    private function hapusFileFoto(User $user): void
+    /**
+     * Hapus file foto dari disk berdasarkan nama file. Aman dipanggil dengan nilai kosong
+     * atau file yang sudah tidak ada.
+     */
+    private function hapusFileFoto(?string $namaFile): void
     {
-        if ($user->foto_profil) {
-            File::delete(public_path(self::FOLDER_FOTO . '/' . basename($user->foto_profil)));
+        if ($namaFile) {
+            File::delete(public_path(self::FOLDER_FOTO . '/' . basename($namaFile)));
         }
     }
 

@@ -31,17 +31,25 @@
         'handphone-dokumentasi' => ['deskripsi' => 'Handphone untuk dokumentasi cepat, menghasilkan foto dan video berkualitas dari perangkat yang praktis dibawa ke mana saja.', 'kelengkapan' => ['Handphone iPhone 13', 'Kabel pengisi daya', 'Adaptor charger', 'Casing pelindung']],
     ];
 
-    // Mode tambah: tidak ada isian bawaan, daftar kelengkapan dimulai dengan satu kolom kosong
+    // Mode tambah: tidak ada isian bawaan. Daftar kelengkapan dimulai kosong (tampil sebagai keadaan kosong yang rapi, bukan kolom kosong)
     $b = $baru
-        ? ['deskripsi' => '', 'kelengkapan' => ['']]
+        ? ['deskripsi' => '', 'kelengkapan' => []]
         : ($bawaan[$alat->slug] ?? ['deskripsi' => '', 'kelengkapan' => []]);
 
-    $fotoUrl          = $alat->foto_url;
-    $fotoUnggahan     = str_starts_with($alat->foto ?? '', 'uploads/');
+    // Tiga slot foto, sama urutannya dengan galeri di form peminjaman.
+    // kolom = nama kolom di tabel dan nama input file; nomor = urutan di galeri (1 utama, 2 kiri, 3 kanan)
+    $slotFoto = [
+        ['kolom' => 'foto',       'judul' => 'Foto Utama', 'nomor' => 1],
+        ['kolom' => 'foto_kiri',  'judul' => 'Foto Kiri',  'nomor' => 2],
+        ['kolom' => 'foto_kanan', 'judul' => 'Foto Kanan', 'nomor' => 3],
+    ];
+    // Galeri [utama, kiri, kanan] dari model: unggahan admin, atau foto bawaan, atau null
+    $galeri = $alat->galeri;
+
     $nilaiNama        = old('nama_alat', $alat->nama_alat);
     $nilaiSubjudul    = old('subjudul', $baru ? '' : \Illuminate\Support\Str::limit($alat->subjudul, 60, ''));
     $nilaiDeskripsi   = old('deskripsi', $alat->deskripsi ?: $b['deskripsi']);
-    $nilaiKelengkapan = old('kelengkapan', $alat->kelengkapan ?: $b['kelengkapan']);
+    $nilaiKelengkapan = (array) old('kelengkapan', $alat->kelengkapan ?: $b['kelengkapan']);
     // Alat baru dimulai dalam keadaan tersedia
     $nilaiTersedia    = (bool) (int) old('tersedia', $baru ? 1 : ($alat->tersedia ? 1 : 0));
 
@@ -136,10 +144,11 @@
                 @method('PUT')
             @endunless
 
-            <!-- KIRI: foto, ketersediaan, hapus (di layar sedang foto di kiri, dua kartu lain bertumpuk di kanannya; di layar lebar bertumpuk satu kolom) -->
+            <!-- KIRI: foto, ketersediaan, hapus -->
             <div class="min-w-0 lg:col-span-2 grid gap-5 sm:gap-6 md:grid-cols-2 lg:flex lg:flex-col">
 
-                <!-- Foto alat -->
+                <!-- Foto alat: 3 slot, sama dengan galeri di form peminjaman.
+                     1 = utama (besar, juga tampil di dashboard), 2 = kiri, 3 = kanan -->
                 <section class="{{ $kelasKartu }} min-w-0 md:row-span-2 lg:row-span-1">
                     <div class="flex items-center gap-3 mb-5">
                         <span class="{{ $kelasIkon }}">
@@ -149,40 +158,58 @@
                         </span>
                         <div class="min-w-0">
                             <h2 class="text-base font-bold text-gray-900 leading-tight">Foto Alat</h2>
-                            <p class="text-xs leading-relaxed text-gray-500 mt-0.5">Foto utama yang tampil di halaman peminjaman.</p>
+                            <p class="text-xs leading-relaxed text-gray-500 mt-0.5">Foto utama tampil besar di halaman peminjaman dan dashboard. Foto kiri dan kanan melengkapi galeri.</p>
                         </div>
                     </div>
 
-                    <!-- Efek hover sama dengan foto besar di form.blade.php -->
-                    <div class="group relative aspect-[4/3] bg-white border border-gray-200/80 rounded-xl overflow-hidden transition-all duration-300 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/15 hover:ring-2 hover:ring-blue-500/20 active:border-blue-400 active:ring-2 active:ring-blue-500/20 motion-safe:hover:-translate-y-1">
-                        <img id="pratinjau-foto" src="{{ $fotoUrl ?: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' }}" alt="Foto {{ $alat->nama_alat ?: 'alat' }}"
-                             onerror="this.classList.add('hidden'); document.getElementById('pratinjau-kosong').classList.remove('hidden');"
-                             class="absolute inset-0 w-full h-full object-contain p-3 transition-transform duration-500 ease-out motion-safe:group-hover:scale-110 {{ $fotoUrl ? '' : 'hidden' }}">
-                        <div id="pratinjau-kosong" class="{{ $fotoUrl ? 'hidden' : '' }} absolute inset-0 flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-300 [&:not(.hidden)]:flex">
-                            <svg class="w-14 h-14 transition-transform duration-500 motion-safe:group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/>
-                            </svg>
-                            <span class="text-xs font-medium text-blue-400">Foto belum tersedia</span>
-                        </div>
-                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        @foreach ($slotFoto as $s)
+                            @php
+                                $punyaUnggahan = str_starts_with($alat->{$s['kolom']} ?? '', 'uploads/');
+                                $urlSlot = $galeri[$loop->index] ?? null;
+                            @endphp
 
-                    <div class="group/f mt-5">
-                        <label for="foto" class="{{ $kelasLabel }}">{{ $baru ? 'Unggah foto' : 'Ganti foto' }}</label>
-                        <input id="foto" type="file" name="foto" accept="image/jpeg,image/png,image/webp"
-                               aria-invalid="{{ $errors->has('foto') ? 'true' : 'false' }}"
-                               class="block w-full min-w-0 text-sm text-gray-600 rounded-xl border border-gray-300 bg-white cursor-pointer transition duration-200 hover:border-blue-400 hover:shadow-sm active:border-blue-400 aria-[invalid=true]:border-red-500 file:mr-4 file:cursor-pointer file:border-0 file:bg-blue-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
-                        <p class="{{ $kelasInfo }} mt-2">
-                            {!! $ikonInfo !!}
-                            <span>Format jpg, png, atau webp, maksimal 2 MB. Foto dengan latar putih paling pas ditampilkan.</span>
-                        </p>
-                    </div>
+                            <div class="{{ $loop->first ? 'col-span-2' : '' }} min-w-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-sm font-semibold text-gray-800">{{ $s['judul'] }}</span>
+                                    <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-50 px-1.5 text-[11px] font-bold text-blue-700">{{ $s['nomor'] }}</span>
+                                </div>
 
-                    @if ($fotoUnggahan)
-                        <label class="mt-4 flex items-start gap-2.5 rounded-xl bg-gray-50 border border-transparent px-4 py-3.5 text-sm leading-relaxed text-gray-700 cursor-pointer transition-colors duration-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md hover:shadow-blue-900/5 active:border-blue-300 active:bg-blue-50 has-[:checked]:border-blue-300 has-[:checked]:bg-blue-50">
-                            <input type="checkbox" name="hapus_foto" value="1" @checked(old('hapus_foto')) class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 shrink-0 cursor-pointer">
-                            <span>Hapus foto unggahan dan kembali memakai foto bawaan.</span>
-                        </label>
-                    @endif
+                                <!-- Efek hover sama dengan galeri di form.blade.php -->
+                                <div class="group relative aspect-[4/3] bg-white border border-gray-200/80 rounded-xl overflow-hidden transition-all duration-300 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/15 hover:ring-2 hover:ring-blue-500/20 active:border-blue-400 active:ring-2 active:ring-blue-500/20 motion-safe:hover:-translate-y-1">
+                                    <img id="pratinjau-{{ $s['kolom'] }}"
+                                         src="{{ $urlSlot ?: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' }}"
+                                         alt="{{ $s['judul'] }} {{ $alat->nama_alat ?: 'alat' }}"
+                                         onerror="this.classList.add('hidden'); document.getElementById('pratinjau-kosong-{{ $s['kolom'] }}').classList.remove('hidden');"
+                                         class="absolute inset-0 w-full h-full object-contain p-3 transition-transform duration-500 ease-out motion-safe:group-hover:scale-110 {{ $urlSlot ? '' : 'hidden' }}">
+                                    <div id="pratinjau-kosong-{{ $s['kolom'] }}" class="{{ $urlSlot ? 'hidden' : '' }} absolute inset-0 flex-col items-center justify-center gap-1 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-300 [&:not(.hidden)]:flex">
+                                        <svg class="w-10 h-10 transition-transform duration-500 motion-safe:group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/>
+                                        </svg>
+                                        <span class="text-[11px] font-medium text-blue-400">Foto belum tersedia</span>
+                                    </div>
+                                </div>
+
+                                <div class="group/f mt-3">
+                                    <label for="{{ $s['kolom'] }}" class="{{ $kelasLabel }}">{{ $baru ? 'Unggah foto' : 'Ganti foto' }}</label>
+                                    <input id="{{ $s['kolom'] }}" type="file" name="{{ $s['kolom'] }}" accept="image/jpeg,image/png,image/webp"
+                                           aria-invalid="{{ $errors->has($s['kolom']) ? 'true' : 'false' }}"
+                                           class="block w-full min-w-0 text-xs text-gray-600 rounded-xl border border-gray-300 bg-white cursor-pointer transition duration-200 hover:border-blue-400 hover:shadow-sm active:border-blue-400 aria-[invalid=true]:border-red-500 file:mr-3 file:cursor-pointer file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                                    <p class="{{ $kelasInfo }} mt-2">
+                                        {!! $ikonInfo !!}
+                                        <span>JPG, PNG, atau WebP, maksimal 2 MB.</span>
+                                    </p>
+                                </div>
+
+                                @if ($punyaUnggahan)
+                                    <label class="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 border border-transparent px-3 py-2.5 text-xs leading-relaxed text-gray-700 cursor-pointer transition-colors duration-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md hover:shadow-blue-900/5 active:border-blue-300 active:bg-blue-50 has-[:checked]:border-blue-300 has-[:checked]:bg-blue-50">
+                                        <input type="checkbox" name="hapus_{{ $s['kolom'] }}" value="1" @checked(old('hapus_' . $s['kolom'])) class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 shrink-0 cursor-pointer">
+                                        <span>Hapus unggahan {{ strtolower($s['judul']) }} ini.</span>
+                                    </label>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
                 </section>
 
                 <!-- Ketersediaan (di mode tambah tidak ada kartu Hapus, jadi kartu ini yang mengisi sisa tinggi kolom di layar lebar) -->
@@ -313,8 +340,9 @@
                     </div>
                 </section>
 
-                <!-- Kelengkapan (di layar lebar mengisi sisa tinggi kolom supaya bawahnya sejajar dengan kolom kiri) -->
-                <section class="{{ $kelasKartu }} lg:flex-1">
+                <!-- Kelengkapan: kartu terakhir di kolom kanan, di layar lebar mengisi sisa tinggi kolom supaya bawahnya sejajar dengan kolom kiri.
+                     Isinya flex-col agar keadaan kosong ikut meregang dan kartu tidak terlihat kosong atau timpang. -->
+                <section class="{{ $kelasKartu }} flex flex-col lg:flex-1">
                     <div class="flex items-center gap-3 mb-5 sm:mb-6">
                         <span class="{{ $kelasIkon }}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -322,23 +350,34 @@
                             </svg>
                         </span>
                         <div class="min-w-0">
-                            <h2 class="text-base font-bold text-gray-900 leading-tight">Kelengkapan alat</h2>
+                            <h2 class="text-base font-bold text-gray-900 leading-tight">Kelengkapan alat <span class="text-xs font-medium text-gray-500">(opsional)</span></h2>
                             <p class="text-xs leading-relaxed text-gray-500 mt-0.5">Satu kolom untuk satu item yang didapat peminjam.</p>
                         </div>
                     </div>
 
-                    <div id="daftar-kelengkapan" class="space-y-2.5">
+                    <div id="daftar-kelengkapan" class="space-y-2.5 {{ count($nilaiKelengkapan) ? '' : 'hidden' }}">
                         @foreach ($nilaiKelengkapan as $item)
                             <div data-baris class="flex items-center gap-2">
-                                <input type="text" name="kelengkapan[]" value="{{ $item }}" maxlength="100" autocapitalize="sentences" placeholder="Contoh: Baterai cadangan" aria-label="Item kelengkapan" class="{{ $kelasInput }} min-w-0">
+                                <input type="text" name="kelengkapan[]" value="{{ $item }}" maxlength="100" autocomplete="off" spellcheck="false" placeholder="Contoh: Baterai cadangan" aria-label="Item kelengkapan" class="{{ $kelasInput }} min-w-0">
                                 <button type="button" data-hapus-baris aria-label="Hapus item" class="{{ $kelasHapusBaris }}">{!! $ikonX !!}</button>
                             </div>
                         @endforeach
                     </div>
 
+                    <!-- Keadaan kosong: tampil bila belum ada item. Tombol Tambah Item di bawahnya tetap menjadi satu-satunya aksi. -->
+                    <div id="kelengkapan-kosong" class="{{ count($nilaiKelengkapan) ? 'hidden' : '' }} min-h-[9rem] flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50/70 px-4 py-8 text-center transition-colors duration-200 hover:border-blue-300 hover:bg-blue-50/60 [&:not(.hidden)]:flex">
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </span>
+                        <p class="text-sm font-semibold text-gray-700">Belum ada item kelengkapan</p>
+                        <p class="max-w-xs text-xs leading-relaxed text-gray-500">Boleh dikosongkan kalau alat ini tidak punya perlengkapan tambahan. Tekan Tambah Item untuk mulai mengisi.</p>
+                    </div>
+
                     <template id="tpl-kelengkapan">
                         <div data-baris class="flex items-center gap-2">
-                            <input type="text" name="kelengkapan[]" value="" maxlength="100" autocapitalize="sentences" placeholder="Contoh: Baterai cadangan" aria-label="Item kelengkapan" class="{{ $kelasInput }} min-w-0">
+                            <input type="text" name="kelengkapan[]" value="" maxlength="100" autocomplete="off" spellcheck="false" placeholder="Contoh: Baterai cadangan" aria-label="Item kelengkapan" class="{{ $kelasInput }} min-w-0">
                             <button type="button" data-hapus-baris aria-label="Hapus item" class="{{ $kelasHapusBaris }}">{!! $ikonX !!}</button>
                         </div>
                     </template>
@@ -350,29 +389,8 @@
 
                     <p class="{{ $kelasInfo }} mt-4">
                         {!! $ikonInfo !!}
-                        <span>Daftar ini tampil bagi peminjam dan dipakai admin untuk mencocokkan isi alat saat pengambilan dan pengembalian. Tulis nama item sejelas mungkin.</span>
+                        <span>Daftar ini tampil bagi peminjam dan dipakai admin untuk mencocokkan isi alat saat pengambilan dan pengembalian. Tulis nama item sejelas mungkin, hanya huruf, angka, dan spasi. Huruf pertama otomatis kapital dan sisanya huruf kecil.</span>
                     </p>
-                </section>
-                <!-- Aturan khusus alat -->
-                <section class="{{ $kelasKartu }} mt-5">
-                    <div class="flex items-center gap-3 mb-5 sm:mb-6">
-                        <span class="{{ $kelasIkon }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                            </svg>
-                        </span>
-                        <div class="min-w-0">
-                            <h2 class="text-base font-bold text-gray-900 leading-tight">Aturan khusus alat</h2>
-                            <p class="text-xs leading-relaxed text-gray-500 mt-0.5">Aturan atau instruksi penting bagi peminjam (opsional).</p>
-                        </div>
-                    </div>
-
-                    @php
-                        $nilaiAturan = old('aturan', is_array($alat->aturan) ? implode("\n", $alat->aturan) : ($alat->aturan ?? ''));
-                    @endphp
-                    <div>
-                        <textarea name="aturan" rows="3" placeholder="Contoh: Gunakan tali pengaman&#10;Kembalikan dalam keadaan bersih" class="{{ $kelasInput }} resize-none">{{ $nilaiAturan }}</textarea>
-                    </div>
                 </section>
             </div>
 
@@ -440,18 +458,20 @@
             periksa();
         })();
 
-        // Pratinjau foto yang baru dipilih
+        // Pratinjau tiga foto (utama, kiri, kanan) yang baru dipilih
         (function () {
-            var input = document.getElementById('foto');
-            var gambar = document.getElementById('pratinjau-foto');
-            var kosong = document.getElementById('pratinjau-kosong');
+            ['foto', 'foto_kiri', 'foto_kanan'].forEach(function (kolom) {
+                var input = document.getElementById(kolom);
+                var gambar = document.getElementById('pratinjau-' + kolom);
+                var kosong = document.getElementById('pratinjau-kosong-' + kolom);
 
-            input.addEventListener('change', function () {
-                var berkas = input.files[0];
-                if (!berkas) return;
-                gambar.src = URL.createObjectURL(berkas);
-                gambar.classList.remove('hidden');
-                kosong.classList.add('hidden');
+                input.addEventListener('change', function () {
+                    var berkas = input.files[0];
+                    if (!berkas) return;
+                    gambar.src = URL.createObjectURL(berkas);
+                    gambar.classList.remove('hidden');
+                    kosong.classList.add('hidden');
+                });
             });
         })();
 
@@ -482,41 +502,59 @@
             saklar.addEventListener('change', perbarui);
         })();
 
-        // Daftar kelengkapan: tambah dan hapus baris (maksimal 20) dengan penghitung item,
-        // dan huruf pertama tiap item otomatis menjadi kapital saat diketik
+        // Daftar kelengkapan: tambah dan hapus baris (maksimal 20) dengan penghitung item dan keadaan kosong.
+        // Aturan pengetikan: hanya huruf, angka, dan spasi (simbol dan titik koma langsung terhapus saat diketik atau ditempel),
+        // huruf pertama kapital dan sisanya huruf kecil, contoh "Baterai cadangan".
         (function () {
             var BATAS = 20;
             var wadah = document.getElementById('daftar-kelengkapan');
+            var kosong = document.getElementById('kelengkapan-kosong');
             var hitung = document.getElementById('hitung-kelengkapan');
             var tombolTambah = document.querySelector('[data-tambah="kelengkapan"]');
+            var SELEKTOR = 'input[name="kelengkapan[]"]';
 
             function perbarui() {
                 var jumlah = wadah.children.length;
                 hitung.textContent = jumlah;
+                // Daftar disembunyikan saat kosong, diganti keadaan kosong
+                wadah.classList.toggle('hidden', jumlah === 0);
+                kosong.classList.toggle('hidden', jumlah > 0);
                 tombolTambah.disabled = jumlah >= BATAS;
                 tombolTambah.classList.toggle('opacity-50', jumlah >= BATAS);
                 tombolTambah.classList.toggle('cursor-not-allowed', jumlah >= BATAS);
             }
 
-            // Hanya huruf pertama yang dibesarkan, sisanya dibiarkan seperti yang diketik ("Tali kamera", bukan "Tali Kamera")
-            function kapitalkan(kolom) {
-                var teks = kolom.value;
-                var i = teks.search(/\S/);
-                if (i < 0) return;
-                var huruf = teks.charAt(i);
-                var besar = huruf.toLocaleUpperCase('id');
-                if (besar === huruf || besar.length !== 1) return;
-                var awal = kolom.selectionStart, akhir = kolom.selectionEnd;
-                kolom.value = teks.slice(0, i) + besar + teks.slice(i + 1);
-                kolom.setSelectionRange(awal, akhir);
+            // Satu aturan untuk semua: buang selain huruf/angka/spasi, rapatkan spasi ganda, tanpa spasi di awal,
+            // lalu huruf pertama kapital dan sisanya kecil. Spasi di akhir sengaja dibiarkan agar kata berikutnya bisa diketik.
+            function rapikan(teks) {
+                var t = teks
+                    .replace(/[^\p{L}\p{N}\s]/gu, '')
+                    .replace(/\s+/g, ' ')
+                    .replace(/^ /, '');
+                if (t === '') return t;
+                return t.charAt(0).toLocaleUpperCase('id') + t.slice(1).toLocaleLowerCase('id');
+            }
+
+            // Kolom dirapikan dengan posisi kursor dijaga, supaya mengetik di tengah teks tidak melompat ke akhir
+            function terapkan(kolom) {
+                var lama = kolom.value;
+                var baru = rapikan(lama);
+                if (baru === lama) return;
+
+                var kursor = kolom.selectionStart;
+                if (kursor === null || kursor === undefined) kursor = lama.length;
+                var posisi = rapikan(lama.slice(0, kursor)).length;
+                kolom.value = baru;
+                kolom.setSelectionRange(posisi, posisi);
             }
 
             tombolTambah.addEventListener('click', function () {
                 if (wadah.children.length >= BATAS) return;
                 wadah.appendChild(document.getElementById('tpl-kelengkapan').content.cloneNode(true));
+                // Daftar harus tampil dulu sebelum kolom baru bisa difokuskan
+                perbarui();
                 var kolom = wadah.lastElementChild.querySelector('input');
                 if (kolom) kolom.focus();
-                perbarui();
             });
 
             wadah.addEventListener('click', function (event) {
@@ -527,7 +565,26 @@
             });
 
             wadah.addEventListener('input', function (event) {
-                if (event.target.matches('input[name="kelengkapan[]"]')) kapitalkan(event.target);
+                if (!event.target.matches(SELEKTOR)) return;
+                // Jangan ganggu keyboard HP yang sedang menyusun kata (komposisi)
+                if (event.isComposing) return;
+                terapkan(event.target);
+            });
+
+            // Setelah komposisi selesai, rapikan sekali lagi
+            wadah.addEventListener('compositionend', function (event) {
+                if (event.target.matches(SELEKTOR)) terapkan(event.target);
+            });
+
+            // Spasi di akhir dibuang saat kolom ditinggalkan
+            wadah.addEventListener('focusout', function (event) {
+                if (!event.target.matches(SELEKTOR)) return;
+                event.target.value = rapikan(event.target.value).replace(/ +$/, '');
+            });
+
+            // Isian yang sudah ada (data lama atau bawaan) ikut dirapikan, mis. "Plat dudukan (quick release)" menjadi "Plat dudukan quick release"
+            wadah.querySelectorAll(SELEKTOR).forEach(function (kolom) {
+                kolom.value = rapikan(kolom.value).replace(/ +$/, '');
             });
 
             perbarui();

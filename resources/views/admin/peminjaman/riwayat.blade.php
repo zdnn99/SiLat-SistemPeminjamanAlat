@@ -108,12 +108,12 @@
                     <a href="{{ route('admin.peminjaman.riwayat') }}" class="order-last inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-center text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95 sm:order-first">Atur ulang</a>
                 @endif
 
-                <!-- Cari: awalan PJM- tetap, user cukup mengetik angka -->
+                <!-- Cari: awalan PJM- tetap, user cukup mengetik angka. Pencarian dijalankan dengan menekan Enter -->
                 <div class="group min-w-0">
                     <label for="cari" class="mb-1 block text-sm font-medium text-gray-700 transition-colors duration-200 group-hover:text-blue-700">Cari kode peminjaman</label>
                     <div class="flex h-11 w-full items-stretch overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm transition-all duration-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-900/10 sm:w-56 motion-safe:hover:-translate-y-0.5">
                         <span class="flex select-none items-center border-r border-gray-200 bg-gray-50 px-3 text-base font-semibold text-gray-600 md:text-sm transition-colors duration-200 group-hover:bg-blue-50 group-hover:text-blue-700">PJM-</span>
-                        <input id="cari" name="q" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" value="{{ $kataAngka }}" placeholder="0001" autocomplete="off" class="h-full min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0">
+                        <input id="cari" name="q" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" value="{{ $kataAngka }}" placeholder="0001" autocomplete="off" enterkeyhint="search" class="h-full min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0">
                     </div>
                 </div>
 
@@ -294,15 +294,22 @@
             periksa();
         })();
 
-        // Pencarian: hanya angka, kirim otomatis setelah berhenti mengetik
+        // Pencarian: hanya angka. Pencarian baru dijalankan saat admin menekan Enter, tidak otomatis saat mengetik.
         const formRiwayat = document.getElementById('filter-riwayat');
         const cariRiwayat = document.getElementById('cari');
-        let jedaPencarian;
+
         cariRiwayat.addEventListener('input', function () {
             this.value = this.value.replace(/\D/g, '');
-            clearTimeout(jedaPencarian);
-            jedaPencarian = setTimeout(function () { formRiwayat.requestSubmit(); }, 450);
         });
+
+        cariRiwayat.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            event.preventDefault();
+            this.value = this.value.replace(/\D/g, '');
+            formRiwayat.requestSubmit();
+        });
+
+        // Mengganti filter status atau urutan tetap langsung diterapkan
         formRiwayat.querySelectorAll('select').forEach(function (pilihan) {
             pilihan.addEventListener('change', function () { formRiwayat.requestSubmit(); });
         });

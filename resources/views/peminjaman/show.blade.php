@@ -68,7 +68,10 @@
         'tripod' => '<rect x="8.5" y="2.5" width="7" height="4" rx="1"/><path d="M12 6.5V11m0 0l-5 10m5-10v10m0-10l5 10"/>',
     ];
 
-    $alat = $katalog[$p->alat->slug] ?? ['foto' => $p->alat->slug, 'sub' => $p->alat->deskripsi ?? '', 'ikon' => 'kamera', 'kelengkapan' => []];
+    $alat = $katalog[$p->alat->slug] ?? ['foto' => $p->alat->slug, 'sub' => '', 'ikon' => 'kamera', 'kelengkapan' => []];
+    $alat['sub']         = $p->alat->subjudul;
+    $alat['kelengkapan'] = $p->alat->kelengkapan ?: ($katalog[$p->alat->slug]['kelengkapan'] ?? []);
+    
     $namaAlat = $p->alat->nama_alat;
 
     // Tanggal-tanggal
@@ -399,9 +402,10 @@
                     <h2 class="mt-1 text-xl sm:text-2xl font-bold text-gray-900 leading-tight break-words transition-colors duration-300 hover:text-blue-700">{{ $namaAlat }}</h2>
                     <p class="text-gray-500 mt-1 break-words">{{ $alat['sub'] }}</p>
 
-                    @if (count($alat['kelengkapan']))
-                        <div class="group/kel border-t border-gray-100 mt-5 pt-5 sm:mt-6 sm:pt-6">
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide transition-colors duration-200 group-hover/kel:text-blue-600">Kelengkapan Alat</p>
+                    <div class="group/kel border-t border-gray-100 mt-5 pt-5 sm:mt-6 sm:pt-6">
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wide transition-colors duration-200 group-hover/kel:text-blue-600">Kelengkapan Alat</p>
+                        
+                        @if (count($alat['kelengkapan']) > 0)
                             <ul class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
                                 @foreach ($alat['kelengkapan'] as $item)
                                     <li class="group flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5 text-sm leading-snug text-gray-700 transition-all duration-200 hover:border-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-600/25 active:border-blue-600 active:bg-blue-600 active:text-white motion-safe:hover:translate-x-1.5 motion-safe:hover:scale-[1.03]">
@@ -412,15 +416,26 @@
                                     </li>
                                 @endforeach
                             </ul>
+                        @else
+                            <!-- Tampilan jika kelengkapan kosong -->
+                            <div class="group/kosong mt-3 flex flex-col items-center justify-center rounded-xl border border-blue-100 bg-blue-50 px-4 py-6 text-center transition-all duration-300 hover:border-blue-300 hover:bg-blue-100/70 hover:shadow-md hover:shadow-blue-900/10">
+                                <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm transition-all duration-300 group-hover/kosong:bg-blue-600 group-hover/kosong:text-white group-hover/kosong:shadow-lg group-hover/kosong:shadow-blue-600/25 motion-safe:group-hover/kosong:-translate-y-0.5 motion-safe:group-hover/kosong:scale-110">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                </span>
+                                <p class="mt-3 text-sm font-semibold text-blue-900 transition-colors duration-200 group-hover/kosong:text-blue-700">Informasi kelengkapan belum tersedia</p>
+                                <p class="mt-1 max-w-[16rem] text-xs leading-relaxed text-gray-600 transition-colors duration-200 group-hover/kosong:text-gray-900">Alat ini mungkin tidak memiliki kelengkapan tambahan, atau datanya belum diinput oleh Admin. Silakan konfirmasi langsung saat pengambilan alat.</p>
+                            </div>
+                        @endif
 
-                            <p class="group mt-4 flex items-start gap-2 text-xs leading-relaxed text-gray-600 transition-colors duration-200 hover:text-gray-900">
-                                <svg class="w-4 h-4 mt-0.5 shrink-0 text-blue-500 transition-all duration-200 group-hover:text-blue-700 motion-safe:group-hover:scale-125" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span>Kelengkapan diperiksa bersama admin saat pengambilan dan pengembalian alat.</span>
-                            </p>
-                        </div>
-                    @endif
+                        <p class="group mt-4 flex items-start gap-2 text-xs leading-relaxed text-gray-600 transition-colors duration-200 hover:text-gray-900">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0 text-blue-500 transition-all duration-200 group-hover:text-blue-700 motion-safe:group-hover:scale-125" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Kelengkapan diperiksa bersama admin saat pengambilan dan pengembalian alat.</span>
+                        </p>
+                    </div>
 
                     @if ($bisaPinjamLagi)
                         <a href="{{ route('peminjaman.create', $p->alat->slug) }}" class="tombol-lagi mt-6 flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-3 rounded-xl transition-all duration-200 shadow-sm hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-600/30 active:scale-[0.98]">

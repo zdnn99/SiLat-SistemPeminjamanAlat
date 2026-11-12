@@ -175,6 +175,10 @@ class AkunAdminController extends Controller
             return back()->with('galat_akun', 'Operasi tidak valid untuk akun admin.');
         }
 
+        if ($user->status_akun !== 'minta_hapus' && ! $user->permintaan_hapus_pada) {
+            return back()->with('galat_akun', 'Akun ini tidak sedang mengajukan penghapusan.');
+        }
+
         $user->permintaan_hapus_pada = null;
         $user->status_akun = 'aktif';
         $user->save();

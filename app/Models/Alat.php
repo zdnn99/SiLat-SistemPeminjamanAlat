@@ -20,6 +20,8 @@ class Alat extends Model
         'deskripsi',
         'stok',
         'foto',
+        'foto_kiri',
+        'foto_kanan',
         'kelengkapan',
         'aturan',
     ];
@@ -27,6 +29,21 @@ class Alat extends Model
     protected $casts = [
         'kelengkapan' => 'array',
         'aturan' => 'array',
+    ];
+
+    /**
+     * Awalan foto bawaan per slug (nama file di public/images/alat/, ditambah 1, 2, 3).
+     * Hanya untuk alat dari katalog awal. Slug tidak boleh diubah karena dipakai sebagai kunci.
+     */
+    private const PREFIKS_FOTO_BAWAAN = [
+        'sony-mirrorless'       => 'sony',
+        'canon-dslr'            => 'cannon',
+        'drone-dokumentasi-1'   => 'drone1-',
+        'drone-dokumentasi-2'   => 'drone2-',
+        'handycam'              => 'handycam',
+        'gimbal-stabilizer'     => 'gimbal',
+        'tripod'                => 'tripod',
+        'handphone-dokumentasi' => 'ipone',
     ];
 
     /**
@@ -125,5 +142,40 @@ class Alat extends Model
         }
 
         return asset($base . '.jpg');
+    }
+
+    /**
+     * Galeri tiga slot foto: [utama, kiri, kanan].
+     * Tiap slot memakai unggahan admin kalau ada, kalau tidak memakai foto bawaan,
+     * dan kalau keduanya tidak ada hasilnya null (ditampilkan sebagai placeholder).
+     * Dipakai bersama oleh halaman peminjaman dan halaman kelola alat.
+     */
+    public function getGaleriAttribute(): array
+    {
+        $prefiks = self::PREFIKS_FOTO_BAWAAN[$this->slug ?? ''] ?? null;
+
+        return collect(['foto', 'foto_kiri', 'foto_kanan'])
+            ->map(function (string $kolom, int $indeks) use ($prefiks) {
+                $path = $this->getAttribute($kolom);
+
+                if ($path && str_starts_with($path, 'uploads/')) {
+                    return asset($path);
+                }
+
+                if ($prefiks === null) {
+                    return null;
+                }
+
+                $dasar = 'images/alat/' . $prefiks . ($indeks + 1);
+
+                foreach (['.webp', '.jpg'] as $ekstensi) {
+                    if (file_exists(public_path($dasar . $ekstensi))) {
+                        return asset($dasar . $ekstensi);
+                    }
+                }
+
+                return null;
+            })
+            ->all();
     }
 }

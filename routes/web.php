@@ -1,10 +1,11 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\AkunAdminController;
 use App\Http\Controllers\Admin\AlatAdminController;
 use App\Http\Controllers\Admin\PeminjamanAdminController;
 use App\Http\Controllers\BannerController;
+use App\Http\Controllers\FotoProfilController;
 use App\Http\Controllers\PeminjamanController;
 use App\Http\Controllers\ProfilController;
 use App\Models\Alat;
@@ -37,6 +38,12 @@ Route::get('/seed-db', function () {
         ], 500);
     }
 });
+
+// Rute cadangan (fallback) untuk foto profil: dipakai bila file di storage/app/public/uploads/profil
+// tidak dapat diakses langsung lewat symlink /storage. Cukup diakses publik karena hanya foto profil.
+Route::get('uploads/profil/{file}', [FotoProfilController::class, 'cadangan'])
+    ->where('file', '[A-Za-z0-9._-]+')
+    ->name('foto-profil.cadangan');
 
 // ==========================================
 // Rute untuk user yang BELUM login (Guest)

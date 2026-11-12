@@ -172,6 +172,7 @@ class PeminjamanController extends Controller
     /**
      * Membatalkan pengajuan peminjaman milik user sendiri.
      * Hanya bisa dilakukan ketika status masih 'menunggu_persetujuan'.
+     * Setelah dibatalkan, user diarahkan ke form peminjaman alat yang sama.
      */
     public function batalkan(Peminjaman $peminjaman)
     {
@@ -184,10 +185,22 @@ class PeminjamanController extends Controller
             return back()->with('galat', 'Pengajuan hanya bisa dibatalkan ketika masih menunggu persetujuan admin.');
         }
 
+        // Ambil alatnya sebelum data peminjaman dihapus
+        $alat = $peminjaman->alat;
+
         $peminjaman->delete();
 
+        $pesan = 'Pengajuan peminjaman berhasil dibatalkan.';
+
+        // Kembali ke form alat yang dibatalkan. Kalau alat sudah dimatikan admin
+        // (form akan 404), arahkan ke riwayat supaya user tidak melihat halaman error.
+        if ($alat && $alat->tersedia) {
+            return redirect()->route('peminjaman.create', $alat->slug)
+                ->with('sukses', $pesan);
+        }
+
         return redirect()->route('peminjaman.riwayat')
-            ->with('sukses', 'Pengajuan peminjaman berhasil dibatalkan.');
+            ->with('sukses', $pesan);
     }
 
     /** Merapikan spasi, mencegah capslock/lowercase penuh, dan memastikan huruf pertama kapital. */
