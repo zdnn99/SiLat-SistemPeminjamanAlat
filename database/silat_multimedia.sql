@@ -249,7 +249,7 @@ CREATE TABLE `peminjaman` (
 
 LOCK TABLES `peminjaman` WRITE;
 /*!40000 ALTER TABLE `peminjaman` DISABLE KEYS */;
-INSERT INTO `peminjaman` VALUES (1,4,7,'2026-11-11','2026-11-12',NULL,NULL,'vsyvfwefqi','menunggu_pengambilan',NULL,'dapodik',NULL,'2026-11-10 07:09:53','2026-11-10 07:10:40'),(2,3,2,'2026-11-06','2026-11-19',NULL,NULL,'untuk dokumentasi kASDHUXJ','ditolak','bohong',NULL,NULL,'2026-11-06 02:26:05','2026-11-06 02:28:33');
+INSERT INTO `peminjaman` VALUES (1,4,7,'2026-11-05','2026-11-06','2026-11-05 15:05:00','2026-11-06 15:05:00','vsyvfwefqi','selesai','Catatan pengembalian: Kelengkapan sesuai.','dapodik','Baik','2026-11-05 07:09:53','2026-11-06 15:05:00'),(2,3,2,'2026-11-06','2026-11-19',NULL,NULL,'untuk dokumentasi kASDHUXJ','ditolak','bohong',NULL,NULL,'2026-11-06 10:00:00','2026-11-06 10:05:00');
 /*!40000 ALTER TABLE `peminjaman` ENABLE KEYS */;
 UNLOCK TABLES;
 
