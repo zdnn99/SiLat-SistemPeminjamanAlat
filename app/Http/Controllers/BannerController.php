@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class BannerController extends Controller
         }
 
         $file = $request->file('banner');
-        $file->move($folder, 'banner.' . $file->guessExtension());
+        app(ImageService::class)->saveAsWebp($file, $folder, 'banner', quality: 82, maxWidth: 1920, maxHeight: 1080);
 
         return redirect('/admin/dashboard')->with('sukses', 'Banner berhasil diganti.');
     }

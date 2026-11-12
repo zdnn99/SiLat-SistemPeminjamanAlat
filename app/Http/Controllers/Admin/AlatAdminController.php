@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Alat;
 use App\Models\Peminjaman;
+use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -196,9 +197,9 @@ class AlatAdminController extends Controller
     /** Pindahkan foto unggahan ke public/uploads/alat dan kembalikan path relatifnya. */
     private function simpanFoto(UploadedFile $berkas, string $slug): string
     {
-        $namaBerkas = $slug . '-' . time() . '.' . $berkas->extension();
-        File::ensureDirectoryExists(public_path('uploads/alat'));
-        $berkas->move(public_path('uploads/alat'), $namaBerkas);
+        $namaDasar = $slug . '-' . time();
+        $targetDir = public_path('uploads/alat');
+        $namaBerkas = app(ImageService::class)->saveAsWebp($berkas, $targetDir, $namaDasar, maxWidth: 1600, maxHeight: 1600);
 
         return 'uploads/alat/' . $namaBerkas;
     }

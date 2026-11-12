@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,10 +39,9 @@ class ProfilController extends Controller
 
         $user = Auth::user();
         $file = $request->file('foto');
-        $namaFile = 'user-' . $user->id . '-' . time() . '.' . $file->extension();
-
-        File::ensureDirectoryExists(public_path(self::FOLDER_FOTO));
-        $file->move(public_path(self::FOLDER_FOTO), $namaFile);
+        $namaDasar = 'user-' . $user->id . '-' . time();
+        $targetDir = public_path(self::FOLDER_FOTO);
+        $namaFile = app(ImageService::class)->saveAsWebp($file, $targetDir, $namaDasar, maxWidth: 800, maxHeight: 800);
 
         $this->hapusFileFoto($user);
 

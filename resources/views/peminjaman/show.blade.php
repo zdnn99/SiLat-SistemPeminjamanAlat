@@ -825,6 +825,7 @@
                 tampilan.hidden = buka;
                 if (tombolUbah) tombolUbah.setAttribute('aria-expanded', buka ? 'true' : 'false');
                 if (buka && kolom) {
+                    kolom.value = batasiHurufDepanBesarSisaKecil(kolom.value);
                     kolom.focus();
                     kolom.setSelectionRange(kolom.value.length, kolom.value.length);
                 } else if (!buka && tombolUbah) {
@@ -839,23 +840,44 @@
             });
         })();
 
-        // Format teks kapitalisasi & cegah capslock penuh
+        // Format catatan: huruf depan besar (kapital), seluruh karakter selain itu dibatasi menjadi kecil
+        function batasiHurufDepanBesarSisaKecil(val) {
+            if (!val) return '';
+            var sudahKapital = false;
+            return val.replace(/\p{L}/gu, function (huruf) {
+                if (!sudahKapital) {
+                    sudahKapital = true;
+                    return huruf.toUpperCase();
+                }
+                return huruf.toLowerCase();
+            });
+        }
+
         function formatTeksOtomatis(el) {
             if (!el) return;
-            function bersihkan(val) {
-                if (!val) return '';
-                if (val.length > 3 && val === val.toUpperCase() && /[A-Z]/.test(val)) {
-                    val = val.toLowerCase();
-                }
-                return val.charAt(0).toUpperCase() + val.slice(1);
+
+            // Format nilai awal bila sudah ada isi (misal saat edit catatan)
+            if (el.value) {
+                el.value = batasiHurufDepanBesarSisaKecil(el.value);
             }
+
             el.addEventListener('input', function () {
-                if (this.value.length === 1) {
-                    this.value = this.value.toUpperCase();
+                var awal = this.value;
+                if (!awal) return;
+
+                var terformat = batasiHurufDepanBesarSisaKecil(awal);
+                if (awal !== terformat) {
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    this.value = terformat;
+                    if (typeof start === 'number' && typeof end === 'number') {
+                        this.setSelectionRange(start, end);
+                    }
                 }
             });
+
             el.addEventListener('blur', function () {
-                this.value = bersihkan(this.value.trim());
+                this.value = batasiHurufDepanBesarSisaKecil(this.value.trim());
             });
         }
 

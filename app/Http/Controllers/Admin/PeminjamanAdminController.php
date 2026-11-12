@@ -71,7 +71,7 @@ class PeminjamanAdminController extends Controller
 
     public function ambil(Request $request, Peminjaman $peminjaman): RedirectResponse
     {
-        $request->merge(['catatan_admin' => $this->rapikan($request->input('catatan_admin'))]);
+        $request->merge(['catatan_admin' => $this->rapikanCatatan($request->input('catatan_admin'))]);
         $validated = $request->validate([
             'catatan_admin' => ['required', 'string', 'max:500'],
         ], [
@@ -160,7 +160,7 @@ class PeminjamanAdminController extends Controller
      */
     public function ubahCatatan(Request $request, Peminjaman $peminjaman): RedirectResponse
     {
-        $request->merge(['catatan' => $this->rapikan($request->input('catatan'))]);
+        $request->merge(['catatan' => $this->rapikanCatatan($request->input('catatan'))]);
 
         $wajib = $peminjaman->status !== 'selesai';
         $validated = $request->validate([
@@ -181,7 +181,7 @@ class PeminjamanAdminController extends Controller
 
             $catatan = trim($validated['catatan'] ?? '');
             if ($catatan !== '') {
-                $catatan = $this->rapikan($catatan);
+                $catatan = $this->rapikanCatatan($catatan);
             }
 
             if ($peminjaman->status === 'menunggu_pengambilan') {
@@ -189,6 +189,9 @@ class PeminjamanAdminController extends Controller
             } elseif ($peminjaman->status === 'selesai') {
                 // Pertahankan format Catatan pengembalian secara terkunci & otomatis
                 $catatanBersih = preg_replace('/^Catatan pengembalian:\s*/i', '', $catatan);
+                if ($catatanBersih !== '') {
+                    $catatanBersih = $this->rapikanCatatan($catatanBersih);
+                }
                 $peminjaman->catatan_admin = $catatanBersih !== '' ? 'Catatan pengembalian: ' . $catatanBersih : null;
             } else {
                 $peminjaman->catatan_admin = $catatan !== '' ? $catatan : null;
@@ -198,6 +201,23 @@ class PeminjamanAdminController extends Controller
         });
 
         return back()->with('sukses', 'Catatan admin berhasil diperbarui.');
+    }
+
+    /** Format catatan: huruf depan besar (kapital), seluruh karakter selain itu kecil. */
+    private function rapikanCatatan(mixed $teks): string
+    {
+        $t = trim(preg_replace('/\s+/', ' ', (string) $teks));
+        if ($t === '') {
+            return '';
+        }
+
+        $lower = mb_strtolower($t, 'UTF-8');
+
+        $result = preg_replace_callback('/\p{L}/u', function ($matches) {
+            return mb_strtoupper($matches[0], 'UTF-8');
+        }, $lower, 1);
+
+        return $result ?? $t;
     }
 
     /** Merapikan spasi, mencegah capslock/lowercase penuh, dan memastikan huruf pertama kapital. */
